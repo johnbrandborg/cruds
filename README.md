@@ -22,7 +22,7 @@ pip install RESTful-Client2
 ### Extending
 
 The library has been created with extensability in mind.  You can Sub Class CRUD
-for example and add the logic requested needed to make the requests.
+for example and add the logic requirements needed to make the requests.
 
 ```python
 from restful_client2 import CRUD
@@ -30,7 +30,7 @@ from restful_client2 import CRUD
 class CatFactNinja(CRUD):
     """Cat Fact Ninja Interface"""
 
-    _fact_url = "fact"
+    _fact_uri = "fact"
 
     def __init__(self, **kwargs):
         host = "http://catfact.ninja/"
@@ -39,7 +39,7 @@ class CatFactNinja(CRUD):
     @property
     def fact(self):
         """ Get a Fact about Cats"""
-        return self.retrieve(self._fact_url).get("fact", "")
+        return self.retrieve(self._fact_uri).get("fact", "")
 
 cat = CatFactNinja()
 print(cat.fact)
