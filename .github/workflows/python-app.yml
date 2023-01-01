@@ -46,6 +46,6 @@ jobs:
           -Dsonar.organization=johnbrandborg
           -Dsonar.projectKey=johnbrandborg_restful-client
           -Dsonar.python.coverage.reportPaths=coverage.xml
-          -Dsonar.sources=faker_events/
+          -Dsonar.sources=restful_client/
           -Dsonar.test.exclusions=tests/**
           -Dsonar.tests=tests/
