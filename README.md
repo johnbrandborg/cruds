@@ -3,13 +3,16 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_restful-client&metric=alert_status)](https://sonarcloud.io/dashboard?id=johnbrandborg_restful-client)
 [![PyPI version](https://badge.fury.io/py/RESTful-Client.svg)](https://pypi.org/project/RESTful-Client/)
 
-RESTful is a simple API library for Humans, inspired by [Python Requests](https://requests.readthedocs.io/en/latest/)
+RESTful Clients2 is a simple API library for Humans, inspired by [Python Requests](https://requests.readthedocs.io/en/latest/)
 
 ```python
 >>> import restful_client2
 >>> cf = restful_client2.CRUD(host="https://catfact.ninja/")
->>> data = cf.retrieve("fact")
+>>> data = cf.read("fact")
 ```
+
+Focus on using Python data types instead of worrying about serialisation.
+Authentication, Timeouts, Retries, Backoff are all built in and can be adjusted.
 
 ### Installation
 
@@ -17,6 +20,17 @@ You can install the client using PIP like so.
 
 ```bash
 pip install RESTful-Client2
+```
+
+### Logging
+
+If you want to see logging set the level using the standard logging interface.
+This logging is also possible with URLLib3 for debugging low level issues.
+
+``` python
+>>> import logging
+>>> import restful_client2
+>>> restful_client2.add_stderr_logger(logging.DEBUG)
 ```
 
 ### Extending
@@ -39,7 +53,7 @@ class CatFactNinja(CRUD):
     @property
     def fact(self):
         """ Get a Fact about Cats"""
-        return self.retrieve(self._fact_uri).get("fact", "")
+        return self.read(self._fact_uri).get("fact", "")
 
 cat = CatFactNinja()
 print(cat.fact)
