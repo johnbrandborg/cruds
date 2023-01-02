@@ -80,8 +80,7 @@ class CRUD:
         """
         Makes a basic Create request to the API, and returns the response
         """
-        encoded_args = urlencode(params)
-        url = self.host + uri + f"?{encoded_args}" if encoded_args else ""
+        url = self.host + uri + (f"?{urlencode(params)}" if params else "")
         method = "POST"
         logger.info(f"API Create Operation to {url}")
 
@@ -120,12 +119,11 @@ class CRUD:
         """
         Makes a basic Update request to the API, and returns the response
         """
-        encoded_args = urlencode(params)
-        url = self.host + uri + f"?{encoded_args}" if encoded_args else ""
+        url = self.host + uri + (f"?{urlencode(params)}" if params else "")
         method = "PATCH" if with_patch else "PUT"
         logger.info(f"API Update Operation to {url}")
 
-        if isinstance(data, (str, bytes)):
+        if not isinstance(data, (str, bytes)):
             data = json.dumps(data)
 
         response = self._http.request(method,
