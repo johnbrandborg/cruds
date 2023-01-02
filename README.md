@@ -1,7 +1,7 @@
 # Python RESTful Client 2
-[![Python appliction](https://github.com/johnbrandborg/restful-client/workflows/Python%20application/badge.svg)](https://github.com/johnbrandborg/restful-client/actions?query=workflow%3A%22Python+application%22)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_restful-client&metric=alert_status)](https://sonarcloud.io/dashboard?id=johnbrandborg_restful-client)
-[![PyPI version](https://badge.fury.io/py/RESTful-Client.svg)](https://pypi.org/project/RESTful-Client/)
+[![Python appliction](https://github.com/johnbrandborg/restful-client2/workflows/Python%20application/badge.svg)](https://github.com/johnbrandborg/restful-client2/actions?query=workflow%3A%22Python+application%22)
+[![PyPI version](https://badge.fury.io/py/RESTful-Client.svg)](https://pypi.org/project/RESTful-Client2/)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_restful-client&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=johnbrandborg_restful-client)
 
 RESTful Clients2 is a simple API library for Humans, inspired by [Python Requests](https://requests.readthedocs.io/en/latest/)
 
