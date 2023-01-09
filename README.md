@@ -50,13 +50,12 @@ class CatFactNinja(CRUD):
         host = "http://catfact.ninja/"
         super().__init__(host=host, **kwargs)
 
-    @property
     def fact(self):
         """ Get a Fact about Cats"""
-        return self.read(self._fact_uri).get("fact", "")
+        return self.read(self._fact_uri)
 
 cat = CatFactNinja()
-print(cat.fact)
+print(cat.fact())
 ```
 
 ## Todo List
