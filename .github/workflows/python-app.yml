@@ -41,11 +41,12 @@ jobs:
     - name: Test with pytest
       run: |
         pytest --cov-report=xml
-    - name: Collect System details
-      run: |
-        pwd
-        ls -la
-        ls -la src/
+    - name: Report Source Check
+      run: grep '<source>' coverage.xml
+    - name: Override Coverage Source Path for Sonar
+      run: sed -i "s/<source>\/home\/runner\/work\/restful_client2<\/source>/<source>\/github\/workspace<\/source>/g" coverage.xml
+    - name: Report Source Check
+      run: grep '<source>' coverage.xml
     - name: SonarCloud Scan
       uses: sonarsource/sonarcloud-github-action@master
       env:
