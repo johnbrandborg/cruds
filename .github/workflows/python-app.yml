@@ -41,6 +41,8 @@ jobs:
     - name: Test with pytest
       run: |
         pytest --cov-report=xml
+    - name: Report Source Check
+      run: grep '<source>' coverage.xml
     - name: SonarCloud Scan
       uses: sonarsource/sonarcloud-github-action@master
       env:
@@ -51,7 +53,7 @@ jobs:
           -Dsonar.organization=johnbrandborg
           -Dsonar.projectKey=johnbrandborg_restful-client
           -Dsonar.python.coverage.reportPaths=coverage.xml
-          -Dsonar.python.version=3.7, 3.8, 3.9, 3.10
-          -Dsonar.sources=src/
+          -Dsonar.python.version=3
+          -Dsonar.sources=/github/workspace/
           -Dsonar.test.exclusions=tests/**
           -Dsonar.tests=tests/
