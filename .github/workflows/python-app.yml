@@ -39,6 +39,9 @@ jobs:
     - name: Test with pytest
       run: |
         pytest --cov-report=xml
+    - name: See Directory contents
+      run: |
+        ls -la
     - name: SonarCloud Scan
       uses: sonarsource/sonarcloud-github-action@master
       env:
@@ -49,6 +52,7 @@ jobs:
           -Dsonar.organization=johnbrandborg
           -Dsonar.projectKey=johnbrandborg_restful-client
           -Dsonar.python.coverage.reportPaths=coverage.xml
+          -Dsonar.python.version=3
           -Dsonar.sources=src/
           -Dsonar.test.exclusions=tests/**
           -Dsonar.tests=tests/
