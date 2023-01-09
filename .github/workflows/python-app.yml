@@ -41,6 +41,11 @@ jobs:
     - name: Test with pytest
       run: |
         pytest --cov-report=xml
+    - name: Collect System details
+      run: |
+        pwd
+        ls -la
+        ls -la src/
     - name: SonarCloud Scan
       uses: sonarsource/sonarcloud-github-action@master
       env:
