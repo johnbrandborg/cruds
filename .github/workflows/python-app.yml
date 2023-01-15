@@ -29,7 +29,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e '.[develop]'
+        pip install .[develop]
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
@@ -49,6 +49,7 @@ jobs:
           -Dsonar.organization=johnbrandborg
           -Dsonar.projectKey=johnbrandborg_restful-client
           -Dsonar.python.coverage.reportPaths=coverage.xml
-          -Dsonar.sources=src/
+          -Dsonar.python.version=3
+          -Dsonar.sources=restful_client2/
           -Dsonar.test.exclusions=tests/**
           -Dsonar.tests=tests/
