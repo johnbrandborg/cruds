@@ -14,24 +14,22 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    #strategy:
-      #matrix:
-        #python-version: ["3.7", "3.8", "3.9", "3.10"]
+    strategy:
+      matrix:
+        python-version: ["3.7", "3.8", "3.9", "3.10"]
 
     steps:
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0  # Disabling shallow clone for SonarCloud
-    #- name: Set up Python ${{ matrix.python-version }}
-    - name: Set up Python 3.9
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
-        #python-version: ${{ matrix.python-version }}
-        python-version: 3.9
+        python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e '.[develop]'
+        pip install .[develop]
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
@@ -41,8 +39,6 @@ jobs:
     - name: Test with pytest
       run: |
         pytest --cov-report=xml
-    - name: Report Source Check
-      run: grep '<source>' coverage.xml
     - name: SonarCloud Scan
       uses: sonarsource/sonarcloud-github-action@master
       env:
@@ -54,6 +50,6 @@ jobs:
           -Dsonar.projectKey=johnbrandborg_restful-client
           -Dsonar.python.coverage.reportPaths=coverage.xml
           -Dsonar.python.version=3
-          -Dsonar.sources=/github/workspace/
+          -Dsonar.sources=restful_client2/
           -Dsonar.test.exclusions=tests/**
           -Dsonar.tests=tests/
