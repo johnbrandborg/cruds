@@ -2,22 +2,43 @@
 Clients that can be used for easily accessing RESTful APIs
 """
 
-import json
 import logging
 import sys
-from typing import Any, Dict, Iterator, List, Union
+from typing import Any, Dict, List, Union
 from urllib.parse import urlencode
 
+import certifi
 import urllib3
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_TIMEOUT=20.0
 
 
 class CRUD:
     """
     A simple RESTful Client that supports CRUD operations as methods.
-    Data supplied as Dictionaries are automatically serialised as JSON. All
-    parameters are key-word values, and positional arguments are not accepted.
+
+    Data supplied as Dictionaries are automatically serialised and deserialized
+    as JSON. All parameters are key-word values, and positional arguments are
+    not accepted.
+
+    Attributes
+    ----------
+    status_whitelist : list
+        A list of status codes to ignore by instances with raise for status
+        enabled.
+
+    Methods
+    -------
+    create:
+        Makes a POST request to the API Server
+    read:
+        Makes a GET request to the API Server
+    update:
+        Makes a PATCH or PUT request to the API Server
+    delete:
+        Makes a DELETE request to the API Server
     """
 
     status_whitelist: List[int] = []
@@ -27,20 +48,54 @@ class CRUD:
                  host: str,
                  auth=None,
                  manager=None,
-                 timeout=20.0,
+                 timeout=DEFAULT_TIMEOUT,
                  raise_status=True,
                  retries=4,
                  backoff_factor=0.9,
                  retry_status_codes=(504, 503, 502, 500, 429),
-                 ):
-        self.host = host if host.endswith("/") else host + "/"
+                 serialize=True,
+                 verify_ssl=True,
+                 ) -> None:
+        """
+        Constructs all the necessary attributes for the API object.
 
+        Parameters
+        ----------
+            host: str
+                The host name of the API server connections will be made too.
+            auth: str or tuple, optional
+                A bearer token can be supplied, or a tuple with the username
+                and password.
+            manager: URLLib3 PoolManager, optional
+                You can supply a PoolManager with custom configuration.
+            timeout : float, optional
+                How long to wait before the connection is considered to be
+                taking to long and cancelled.
+            raise_status : bool, optional
+                If a status code of 400-599 is returned in a response will an
+                exception is raised.
+            retries : int, optional
+                How many times to retry connecting to the host.
+            backoff_factor : float, optional
+                How much delay should be added with each retry.
+            retry_status_codes : typle[int], optional
+                Status codes that will trigger retries.
+                (default is (504, 503, 502, 429))
+            serialize : boolaen, optional
+                Serialize and Deserialize dictionaires for data sent and received.
+                (default is True)
+            verify_ssl : boolean, optional
+                Verify the SSL certificate with Certificate Authorities.
+                (default is True)
+        """
+        self.host: str = host if host.endswith("/") else host + "/"
+        self.serialize = serialize
         logger.info("API Operation Timeout(sec): %s, Raises Exceptions on status: %s",
                     timeout,
                     raise_status)
 
-        self.raise_status = raise_status
-        self.timeout = timeout
+        self.raise_status: bool = raise_status
+        self.timeout: float = timeout
 
         if isinstance(manager, urllib3.PoolManager):
             logger.info("Using supplied HTTP Manager")
@@ -59,7 +114,10 @@ class CRUD:
                 logger.info("Retries: Disabled")
                 retry = False
 
-            self._http = urllib3.PoolManager(retries=retry)
+            self._http = urllib3.PoolManager(
+                cert_reqs="CERT_REQUIRED" if verify_ssl else "CERT_NONE",
+                ca_certs=certifi.where(),
+                retries=retry)
 
             if isinstance(auth, str):
                 self._http.headers["Authorization"] = f"Bearer {auth}"
@@ -70,7 +128,7 @@ class CRUD:
             else:
                 logger.info("No authentication setup")
 
-        self._http.headers["Content-Type"] = "application/json"
+        self._http.headers["Content-Type"] = "application/json; charset=utf-8"
 
     def create(self,
                uri: str,
@@ -78,27 +136,65 @@ class CRUD:
                params: Union[Dict[Any, Any], None] = None,
                ) -> Union[Dict[Any, Any], bytes]:
         """
-        Makes a basic Create request to the API, and returns the response
+        Makes a basic Create request to the API, and returns the response.
+
+        The HTTP method used is POST, and the data can be either a dictionary
+        that is serialised to JSON or bytes and strings that will be sent
+        without serialisation.
+
+        For POST requests parameters are encoded into the URL.
+        https://urllib3.readthedocs.io/en/stable/user-guide.html#query-parameters
+
+        Parameters
+        ----------
+        uri : str
+            The URI to be used to with the connection to the API
+        data : dict or bytes or string
+            Payload to be sent to the API
+        params : dict, optional
+            Parameters to be added to the URI
+
+        Returns
+        -------
+        dict if the response is JSON, otherwise bytes
         """
-        url = self.host + uri + (f"?{urlencode(params)}" if params else "")
+        url = self.host + uri
+        safe_params = f"?{urlencode(params)}" if params else ""
         method = "POST"
         logger.info(f"API Create Operation to {url}")
 
-        if not isinstance(data, (str, bytes)):
-            data = json.dumps(data)
+        if self.serialize and isinstance(data, dict):
+            response = self._http.request(method,
+                                          url + safe_params,
+                                          json=data,
+                                          timeout=self.timeout)
+        else:
+            response = self._http.request(method,
+                                          url + safe_params,
+                                          body=data,
+                                          timeout=self.timeout)
 
-        response = self._http.request(method,
-                                      url,
-                                      body=data,
-                                      timeout=self.timeout)
         return self._process_resp(method, response)
 
     def read(self,
              uri: str,
-             fields: Union[Dict[Any, Any], None] = None,
+             params: Union[Dict[Any, Any], None] = None,
              ) -> Union[Dict[Any, Any], bytes]:
         """
         Makes a basic Retrieve request to the API, and returns the response
+
+        The HTTP method used is GET.
+
+        Parameters
+        ----------
+        uri : str
+            The URI to be used to with the connection to the API
+        params : dict, optional
+            Parameters to be added to the URI
+
+        Returns
+        -------
+        dict if the response is JSON, otherwise bytes
         """
         url = self.host + uri
         method = "GET"
@@ -106,7 +202,7 @@ class CRUD:
 
         response = self._http.request(method,
                                       url,
-                                      fields=fields,
+                                      fields=params,
                                       timeout=self.timeout)
         return self._process_resp(method, response)
 
@@ -114,30 +210,68 @@ class CRUD:
                uri: str,
                data: Union[Dict[Any, Any], str],
                params: Union[Dict[Any, Any], None] = None,
-               with_patch: bool = False,
+               replace: bool = False,
                ) -> Union[Dict[Any, Any], bytes]:
         """
-        Makes a basic Update request to the API, and returns the response
+        Makes a basic Update request to the API, and returns the response.
+
+        The HTTP method used is PATCH (or PUT with replace enabled), and the data
+        can be either a dictionary that is serialised to JSON or bytes and
+        strings that will be sent without serialisation.
+
+        For PUT requests parameters are encoded into the URL.
+        https://urllib3.readthedocs.io/en/stable/user-guide.html#query-parameters
+
+        Parameters
+        ----------
+        uri : str
+            The URI to be used to with the connection to the API
+        data : dict or bytes or string
+            Payload to be sent to the API
+        params : dict, optional
+            Parameters to be added to the URI
+        replace : bool, optional
+            Requests a full replacement of the entire entity. Uses PUT Method.
+
+        Returns
+        -------
+        dict if the response is JSON, otherwise bytes
         """
-        url = self.host + uri + (f"?{urlencode(params)}" if params else "")
-        method = "PATCH" if with_patch else "PUT"
+        url = self.host + uri
+        safe_params = f"?{urlencode(params)}" if params else ""
+        method = "PUT" if replace else "PATCH"
         logger.info(f"API Update Operation to {url}")
 
-        if not isinstance(data, (str, bytes)):
-            data = json.dumps(data)
+        if self.serialize and isinstance(data, dict):
+            response = self._http.request(method,
+                                          url + safe_params,
+                                          json=data,
+                                          timeout=self.timeout)
+        else:
+            response = self._http.request(method,
+                                          url + safe_params,
+                                          body=data,
+                                          timeout=self.timeout)
 
-        response = self._http.request(method,
-                                      url,
-                                      body=data,
-                                      timeout=self.timeout)
         return self._process_resp(method, response)
 
     def delete(self,
                uri: str,
-               fields: Union[Dict[Any, Any], None] = None
+               params: Union[Dict[Any, Any], None] = None
                ) -> Union[Dict[Any, Any], bytes]:
         """
         Makes a basic Delete request to the API, and returns the response
+
+        Parameters
+        ----------
+        uri : str
+            The URI to be used to with the connection to the API
+        params : dict, optional
+            Parameters to be added to the URI
+
+        Returns
+        -------
+        dict if the response is JSON, otherwise bytes
         """
         url = self.host + uri
         method = "DELETE"
@@ -145,16 +279,20 @@ class CRUD:
 
         response = self._http.request(method,
                                       self.host + uri,
-                                      fields=fields,
+                                      fields=params,
                                       timeout=self.timeout)
         return self._process_resp(method, response)
 
-    def _process_resp(self, method, response) -> Union[Dict[Any, Any], bytes]:
+    def _process_resp(
+            self,
+            method: str,
+            response: urllib3.response.BaseHTTPResponse,
+            ) -> Union[Dict[Any, Any], bytes]:
         """
         Processes the Responce from HTTP Requests in a standardize manner, and
         displays information.
         """
-        logger.debug(
+        logger.info(
             f"Method: {method}, Status Code: {response.status}, "
             f"Data: {sys.getsizeof(response.data)} Bytes"
         )
@@ -172,7 +310,7 @@ class CRUD:
                       f" Message: {response.data.decode('utf-8')}"
                 raise urllib3.exceptions.HTTPError(msg)
 
-        try:
-            return json.loads(response.data)
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            return response.data
+        if self.serialize and 'application/json' in response.headers.get('Content-Type', ''):
+            return response.json()
+
+        return response.data

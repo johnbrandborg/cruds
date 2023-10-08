@@ -23,22 +23,4 @@
 RESTful is a simple API library for Humans, inspired by Python Requests
 """
 
-import logging
-
 from .clients import CRUD
-
-logging.getLogger(__name__).addHandler(logging.NullHandler())
-
-
-def add_stderr_logger(level: int = logging.DEBUG) -> logging.StreamHandler:
-    """
-    Helper for quickly adding a StreamHandler to the logger. Useful for
-    debugging.  Returns the handler after adding it.
-    """
-    logger = logging.getLogger(__name__)
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
-    logger.addHandler(handler)
-    logger.setLevel(level)
-    logger.debug("Added a stderr logging handler to logger: %s", __name__)
-    return handler

@@ -3,7 +3,7 @@
 [![PyPI version](https://badge.fury.io/py/RESTful-Client.svg)](https://pypi.org/project/RESTful-Client2/)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_restful-client&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=johnbrandborg_restful-client)
 
-RESTful Clients2 is a simple API library for Humans, inspired by [Python Requests](https://requests.readthedocs.io/en/latest/)
+RESTful Clients2 is a simple high level library for Humans, inspired by [Python Requests](https://requests.readthedocs.io/en/latest/)
 
 ```python
 >>> import restful_client2
@@ -25,12 +25,13 @@ pip install RESTful-Client2
 ### Logging
 
 If you want to see logging set the level using the standard logging interface.
-This logging is also possible with URLLib3 for debugging low level issues.
+DEBUG will show you URLLib3, but INFO will give you general information from
+the RESTful-Client2.
 
 ``` python
 >>> import logging
 >>> import restful_client2
->>> restful_client2.add_stderr_logger(logging.DEBUG)
+>>> logging.basicConfig(level=logging.INFO)
 ```
 
 ### Extending
@@ -50,12 +51,13 @@ class CatFactNinja(CRUD):
         host = "http://catfact.ninja/"
         super().__init__(host=host, **kwargs)
 
+    @property
     def fact(self):
         """ Get a Fact about Cats"""
         return self.read(self._fact_uri)
 
 cat = CatFactNinja()
-print(cat.fact())
+print(cat.fact)
 ```
 
 ## Todo List
