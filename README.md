@@ -12,20 +12,18 @@ and written using URLLib3.
 >>> data = catfact_ninja.read("fact")
 ```
 
-Interact with RESTful APIs using Create, Read, Update and Delete requests easily,
-and safely.  Focus on using Python data types instead of worrying about serialization.
-Authentication, URL encoding, timeouts, retries, and rate limit back-off are all built
-in.
+Interact with RESTful APIs using Create, Read, Update and Delete requests quickly,
+easily, and safely.
 
 Features:
  * Authentication with a bearer token or username and password
- * JSON serialization/deserialize
- * URL Parameters handled as Dictionaries
+ * Data serialization/deserialize (Only JSON format)
+ * Request parameters as Dictionaries and automatically URL encoded
  * Default connection timeout (300 seconds)
- * Raises exceptions on bad status codes
+ * Raises exceptions on bad status codes (Can be whitelisted)
  * Retries with back-off
  * SSL Verification
- * Custom URLLib3 PoolManagers can be used
+ * Logging for monitoring
 
 ### Installation
 
@@ -44,20 +42,20 @@ from cruds import Client
 
 # Authentication with Username and Password
 api = Client(host="https://localhost/api/v1/",
-		     auth=("username", "password"))
+             auth=("username", "password"))
 
 # Authentication with Token
 api = Client(host="https://localhost/api/v1/",
-		     auth="bearer-token")
+             auth="bearer-token")
 
-# Return raw data and ignore bad status codes
+# Send and receive raw data and ignore bad status codes
 api = Client(host="https://localhost/api/v1/",
-			 serialize=False,
-			 raise_status=False)
+             serialize=False,
+             raise_status=False)
 
 # Disable SSL Verification
 api = Client(host="https://localhost/api/v1/",
-			 verify_ssl=False)
+             verify_ssl=False)
 ```
 
 ### Logging

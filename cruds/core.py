@@ -3,7 +3,9 @@ Clients that can be used for easily accessing RESTful APIs
 """
 
 import logging
+from json.decoder import JSONDecodeError
 import sys
+
 from typing import Any, Dict, List, Union
 from urllib.parse import urlencode
 
@@ -310,7 +312,14 @@ class Client:
                       f" Message: {response.data.decode('utf-8')}"
                 raise urllib3.exceptions.HTTPError(msg)
 
-        if self.serialize and 'application/json' in response.headers.get('Content-Type', ''):
-            return response.json()
+        if self.serialize:
+            if 'application/json' in response.headers.get('Content-Type', ''):
+                return response.json()
+
+            logger.warning("Response content type is not declared as JSON but serialize is enabled")
+            try:
+                return response.json()
+            except JSONDecodeError:
+                return response.data
 
         return response.data
