@@ -4,6 +4,7 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_cruds&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=johnbrandborg_cruds)
 
 CRUDs is a simple high level library for Humans, inspired by [Python Requests](https://requests.readthedocs.io/en/latest/)
+and written using URLLib3.
 
 ```python
 >>> import cruds
@@ -11,10 +12,20 @@ CRUDs is a simple high level library for Humans, inspired by [Python Requests](h
 >>> data = catfact_ninja.read("fact")
 ```
 
-Interact with RESTful API using Create, Read, Update and Delete requests.
-Focus on using Python data types instead of worrying about serialization.
-Authentication, timeouts, retries, and rate limit back-off are all built in
-and can be adjusted.
+Interact with RESTful APIs using Create, Read, Update and Delete requests easily,
+and safely.  Focus on using Python data types instead of worrying about serialization.
+Authentication, URL encoding, timeouts, retries, and rate limit back-off are all built
+in.
+
+Features:
+ * Authentication with a bearer token or username and password
+ * JSON serialization/deserialize
+ * URL Parameters handled as Dictionaries
+ * Default connection timeout (300 seconds)
+ * Raises exceptions on bad status codes
+ * Retries with back-off
+ * SSL Verification
+ * Custom URLLib3 PoolManagers can be used
 
 ### Installation
 
@@ -24,16 +35,41 @@ You can install the client using PIP like so.
 pip install cruds
 ```
 
+### Usage
+
+All features can be adjusted on the Client to suit most needs.
+
+```python
+from cruds import Client
+
+# Authentication with Username and Password
+api = Client(host="https://localhost/api/v1/",
+		     auth=("username", "password"))
+
+# Authentication with Token
+api = Client(host="https://localhost/api/v1/",
+		     auth="bearer-token")
+
+# Return raw data and ignore bad status codes
+api = Client(host="https://localhost/api/v1/",
+			 serialize=False,
+			 raise_status=False)
+
+# Disable SSL Verification
+api = Client(host="https://localhost/api/v1/",
+			 verify_ssl=False)
+```
+
 ### Logging
 
 If you want to see logging set the level using the standard logging interface.
 DEBUG will show you URLLib3, but INFO will give you general information from
-the cruds.
+the CRUDs Client.
 
 ``` python
->>> import logging
->>> import cruds
->>> logging.basicConfig(level=logging.INFO)
+import logging
+import cruds
+logging.basicConfig(level=logging.INFO)
 ```
 
 ### Extensibility
@@ -66,7 +102,7 @@ print(cat.fact)
 - [ ] OAuth Client for Authentication
 
 ## License
-cruds is released under the MIT License. See the bundled LICENSE file for details.
+CRUDs is released under the MIT License. See the bundled LICENSE file for details.
 
 ## Credits
 * [URLLib3 Team](https://github.com/urllib3)

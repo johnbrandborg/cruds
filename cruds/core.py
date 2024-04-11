@@ -12,7 +12,7 @@ import urllib3
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_TIMEOUT = 20.0
+DEFAULT_TIMEOUT = 300.0
 
 
 class Client:
