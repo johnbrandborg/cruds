@@ -44,9 +44,9 @@ jobs:
       with:
         args: >
           -Dsonar.organization=johnbrandborg
-          -Dsonar.projectKey=johnbrandborg_restful-client
+          -Dsonar.projectKey=johnbrandborg_cruds
           -Dsonar.python.coverage.reportPaths=coverage.xml
           -Dsonar.python.version=3
-          -Dsonar.sources=restful_client/
+          -Dsonar.sources=cruds/
           -Dsonar.test.exclusions=tests/**
           -Dsonar.tests=tests/

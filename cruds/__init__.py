@@ -23,4 +23,4 @@
 RESTful is a simple API library for Humans, inspired by Python Requests
 """
 
-from .core import Platform
+from .core import Client

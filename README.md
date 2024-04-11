@@ -11,8 +11,10 @@ CRUDs is a simple high level library for Humans, inspired by [Python Requests](h
 >>> data = catfact_ninja.read("fact")
 ```
 
-Focus on using Python data types instead of worrying about serialisation.
-Authentication, timeouts, retries, and backoff are all built in and can be adjusted.
+Interact with RESTful API using Create, Read, Update and Delete requests.
+Focus on using Python data types instead of worrying about serialization.
+Authentication, timeouts, retries, and rate limit back-off are all built in
+and can be adjusted.
 
 ### Installation
 
