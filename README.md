@@ -1,5 +1,5 @@
 # CRUDs
-[![Python appliction](https://github.com/johnbrandborg/cruds/workflows/Python%20application/badge.svg)](https://github.com/johnbrandborg/cruds/actions?query=workflow%3A%22Python+application%22)
+[![Development](https://github.com/johnbrandborg/cruds/actions/workflows/development.yml/badge.svg)](https://github.com/johnbrandborg/cruds/actions/workflows/development.yml)
 [![PyPI version](https://badge.fury.io/py/cruds.svg)](https://pypi.org/project/cruds/)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_cruds&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=johnbrandborg_cruds)
 
