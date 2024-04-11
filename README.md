@@ -3,7 +3,7 @@
 [![PyPI version](https://badge.fury.io/py/restful-client.svg)](https://pypi.org/project/restful-client/)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_restful-client&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=johnbrandborg_restful-client)
 
-RESTful Clients is a simple high level Python library for Humans, inspired by [Python Requests](https://requests.readthedocs.io/en/latest/)
+RESTful Clients is a simple API library for Humans, inspired by [Python Requests](https://requests.readthedocs.io/en/latest/)
 
 ```python
 >>> import restful_client
