@@ -1,14 +1,15 @@
 test:
-	@python3 -m pytest
+	@python -m pytest
 
 lint:
-	@python3 -m flake8
+	@python -m flake8
 
 develop:
-	@python3 -m pip install -e .[develop]
+	@python -m pip install -e .[develop]
 
 clean:
-	@find . -name '__pycache__' | xargs rm -fr
+	@find . -name '__pycache__' | xargs rm -fr;\
+		echo "Clean completed"
 
 help:
 	@echo "\
@@ -21,4 +22,4 @@ Targets\n\
  help:		Displays the help menu with all the targets\n";
 
 .DEFAULT_GOAL := help
-.PHONY: test lint patch dev clean help
+.PHONY: test lint develop clean help

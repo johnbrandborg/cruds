@@ -50,6 +50,6 @@ jobs:
           -Dsonar.projectKey=johnbrandborg_restful-client
           -Dsonar.python.coverage.reportPaths=coverage.xml
           -Dsonar.python.version=3
-          -Dsonar.sources=restful_client2/
+          -Dsonar.sources=restful_client/
           -Dsonar.test.exclusions=tests/**
           -Dsonar.tests=tests/

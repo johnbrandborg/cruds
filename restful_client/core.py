@@ -12,12 +12,12 @@ import urllib3
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_TIMEOUT=20.0
+DEFAULT_TIMEOUT = 20.0
 
 
-class CRUD:
+class Platform:
     """
-    A simple RESTful Client that supports CRUD operations as methods.
+    Represents an platform interface that supports CRUD operations as methods.
 
     Data supplied as Dictionaries are automatically serialised and deserialized
     as JSON. All parameters are key-word values, and positional arguments are

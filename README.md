@@ -1,13 +1,13 @@
-# Python RESTful Client 2
-[![Python appliction](https://github.com/johnbrandborg/restful-client2/workflows/Python%20application/badge.svg)](https://github.com/johnbrandborg/restful-client2/actions?query=workflow%3A%22Python+application%22)
-[![PyPI version](https://badge.fury.io/py/RESTful-Client.svg)](https://pypi.org/project/RESTful-Client2/)
+# RESTful Client
+[![Python appliction](https://github.com/johnbrandborg/restful-client/workflows/Python%20application/badge.svg)](https://github.com/johnbrandborg/restful-client/actions?query=workflow%3A%22Python+application%22)
+[![PyPI version](https://badge.fury.io/py/restful-client.svg)](https://pypi.org/project/restful-client/)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_restful-client&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=johnbrandborg_restful-client)
 
-RESTful Clients2 is a simple high level library for Humans, inspired by [Python Requests](https://requests.readthedocs.io/en/latest/)
+RESTful Clients is a simple high level Python library for Humans, inspired by [Python Requests](https://requests.readthedocs.io/en/latest/)
 
 ```python
->>> import restful_client2
->>> cf = restful_client2.CRUD(host="https://catfact.ninja/")
+>>> import restful_client
+>>> cf = restful_client.Platform(host="https://catfact.ninja/")
 >>> data = cf.read("fact")
 ```
 
@@ -19,30 +19,30 @@ Authentication, Timeouts, Retries, Backoff are all built in and can be adjusted.
 You can install the client using PIP like so.
 
 ```bash
-pip install RESTful-Client2
+pip install restful-client
 ```
 
 ### Logging
 
 If you want to see logging set the level using the standard logging interface.
 DEBUG will show you URLLib3, but INFO will give you general information from
-the RESTful-Client2.
+the restful-client.
 
 ``` python
 >>> import logging
->>> import restful_client2
+>>> import restful_client
 >>> logging.basicConfig(level=logging.INFO)
 ```
 
 ### Extending
 
-The library has been created with extensability in mind.  You can Sub Class CRUD
+The library has been created with extensability in mind.  You can Sub Class Platform
 for example and add the logic requirements needed to make the requests.
 
 ```python
-from restful_client2 import CRUD
+from restful_client import Platform
 
-class CatFactNinja(CRUD):
+class CatFactNinja(Platform):
     """Cat Fact Ninja Interface"""
 
     _fact_uri = "fact"
@@ -64,7 +64,7 @@ print(cat.fact)
 - [ ] OAuth Client for Authentication
 
 ## License
-RESTful-Client is released under the MIT License. See the bundled LICENSE file for details.
+restful-client is released under the MIT License. See the bundled LICENSE file for details.
 
 ## Credits
 * [URLLib3 Team](https://github.com/urllib3)
