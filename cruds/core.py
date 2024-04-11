@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_TIMEOUT = 20.0
 
 
-class Platform:
+class Client:
     """
     Represents an platform interface that supports CRUD operations as methods.
 

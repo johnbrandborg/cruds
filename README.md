@@ -1,48 +1,48 @@
-# RESTful Client
-[![Python appliction](https://github.com/johnbrandborg/restful-client/workflows/Python%20application/badge.svg)](https://github.com/johnbrandborg/restful-client/actions?query=workflow%3A%22Python+application%22)
-[![PyPI version](https://badge.fury.io/py/restful-client.svg)](https://pypi.org/project/restful-client/)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_restful-client&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=johnbrandborg_restful-client)
+# CRUDs
+[![Python appliction](https://github.com/johnbrandborg/cruds/workflows/Python%20application/badge.svg)](https://github.com/johnbrandborg/cruds/actions?query=workflow%3A%22Python+application%22)
+[![PyPI version](https://badge.fury.io/py/cruds.svg)](https://pypi.org/project/cruds/)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_cruds&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=johnbrandborg_cruds)
 
-RESTful Clients is a simple API library for Humans, inspired by [Python Requests](https://requests.readthedocs.io/en/latest/)
+CRUDs is a simple high level library for Humans, inspired by [Python Requests](https://requests.readthedocs.io/en/latest/)
 
 ```python
->>> import restful_client
->>> cf = restful_client.Platform(host="https://catfact.ninja/")
->>> data = cf.read("fact")
+>>> import cruds
+>>> catfact_ninja = cruds.Client(host="https://catfact.ninja/")
+>>> data = catfact_ninja.read("fact")
 ```
 
 Focus on using Python data types instead of worrying about serialisation.
-Authentication, Timeouts, Retries, Backoff are all built in and can be adjusted.
+Authentication, timeouts, retries, and backoff are all built in and can be adjusted.
 
 ### Installation
 
 You can install the client using PIP like so.
 
 ```bash
-pip install restful-client
+pip install cruds
 ```
 
 ### Logging
 
 If you want to see logging set the level using the standard logging interface.
 DEBUG will show you URLLib3, but INFO will give you general information from
-the restful-client.
+the cruds.
 
 ``` python
 >>> import logging
->>> import restful_client
+>>> import cruds
 >>> logging.basicConfig(level=logging.INFO)
 ```
 
-### Extending
+### Extensibility
 
-The library has been created with extensability in mind.  You can Sub Class Platform
+The library has been created with extensibility in mind.  You can Sub Class Client
 for example and add the logic requirements needed to make the requests.
 
 ```python
-from restful_client import Platform
+from cruds import Client
 
-class CatFactNinja(Platform):
+class CatFactNinja(Client):
     """Cat Fact Ninja Interface"""
 
     _fact_uri = "fact"
@@ -64,7 +64,7 @@ print(cat.fact)
 - [ ] OAuth Client for Authentication
 
 ## License
-restful-client is released under the MIT License. See the bundled LICENSE file for details.
+cruds is released under the MIT License. See the bundled LICENSE file for details.
 
 ## Credits
 * [URLLib3 Team](https://github.com/urllib3)
