@@ -2,6 +2,7 @@
 Clients that can be used for easily accessing RESTful APIs
 """
 
+
 import logging
 from json.decoder import JSONDecodeError
 import sys
@@ -12,7 +13,7 @@ from urllib.parse import urlencode
 import certifi
 import urllib3
 
-logger = logging.getLogger(__name__)
+logger= logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 300.0
 

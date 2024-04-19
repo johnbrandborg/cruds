@@ -1,0 +1,81 @@
+version: 1
+
+api:
+  - name: Planhat
+    docstring: |
+      Handles sending and receiving data using specifically with PlanHat's API.
+
+      planhat = PlanHat(company_id="638dc2b67479f6481b088c50", auth="abc123")
+      print(planhat.asset.get_by_id("extid-21432948"))
+
+      Most methods will use the normal API token for auth, but some will use
+      the tenant token (like 'segment') or no auth token but the tenant token is
+      supplied directly to the method.
+
+      API Documentation: https://docs.planhat.com/#introduction
+
+    default_model_methods:
+      - create
+      - update
+      - get_by_id
+      - get_list
+      - delete
+      - bulk_upsert
+
+    required_model_methods:
+      - _bulk_upsert
+      - _get_all_data
+      - bulk_upsert_response_check
+      - epoc_days_format
+      - create_model_params
+
+    models:
+      - name: asset
+        docstring: |
+          Assets in Planhat can represent many different things depending on
+          your use case. It could be drones, if you're selling a drone tracking
+          product, or it could be instances of your product in cases where a
+          single customer can run multiple instances of your product in parallel.
+          Assets could also represent your different products.
+
+          More generally, Assets are "nested objects" for which you may want to
+          track usage separately, but don't need to treat them as separate
+          customers with individual contacts, conversations, etc.
+        uri: assets
+
+      - name: company
+        docstring: |
+          Companies ("accounts"), are your customers. Depending on your business
+          these might be agencies, schools, other businesses or something else.
+          Companies can also be your previous customers and potentially future
+          customers (prospects).
+
+          The company object is one of the most central in Planhat since most
+          other objects relate to it, and it's frequently used to filter out
+          other information, such as endsuers, licenses, notes etc.
+
+          In Planhat it is possible have a hierarchical structure for the
+          companies, meaning that they can be grouped into organizations with
+          parents and children in a tree like structure.
+        methods:
+          - create
+          - get_lean_list
+        uri: companies
+
+      - name: enduser
+        docstring: |
+          An enduser represents an individual at one of your customers,
+          typically a user of your product, a business contact or both. Endusers
+          can automatically be created based on user tracking events, or based
+          on conversations such as emails and tickets.
+
+          Often this automatic creation of contacts along with sync from an
+          external CRM or similar is enough. But there are also situations where
+          you may want to be 100% sure all your users exist in Planhat, and then
+          it would make sense to create them in Planhat over api as soon as they
+          get created in your own system.
+
+          If companyId is not present in the payload, and the email has a domain
+          already registered within a company, then Planhat will auto-assign the
+          new enduser to the company using domain matching.
+        uri: endusers

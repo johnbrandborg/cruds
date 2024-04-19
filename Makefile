@@ -2,7 +2,7 @@ test:
 	@python -m pytest
 
 lint:
-	@python -m flake8
+	@python -m flake8 --select=E9,F63,F7,F82 --show-source
 
 develop:
 	@python -m pip install -e .[develop]
