@@ -13,7 +13,7 @@ api:
       supplied directly to the method.
 
       API Documentation: https://docs.planhat.com/#introduction
-    package: cruds.interface_methods.planhat
+    package: cruds.interface_logic.planhat
     default_model_methods:
       - create
       - update
