@@ -4,12 +4,13 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_cruds&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=johnbrandborg_cruds)
 
 CRUDs is a simple high level library for Humans, inspired by [Python Requests](https://requests.readthedocs.io/en/latest/)
-and written using URLLib3.
+and written using [URLLib3 Team](https://github.com/urllib3).
 
 ```python
 >>> import cruds
 >>> catfact_ninja = cruds.Client(host="https://catfact.ninja/")
 >>> data = catfact_ninja.read("fact")
+>>> print(data)
 ```
 
 Interact with RESTful APIs using Create, Read, Update and Delete requests quickly,
@@ -20,14 +21,16 @@ Features:
  * Data serialization/deserialize (Only JSON format)
  * Request parameters as Dictionaries and automatically URL encoded
  * Default connection timeout (300 seconds)
- * Raises exceptions on bad status codes (Can be whitelisted)
+ * Raises exceptions on bad status codes (Can be white listed)
  * Retries with back-off
  * SSL Verification
  * Logging for monitoring
+ * JSON Schema Validation
+ * Interfaces as Configuration
 
 ### Installation
 
-You can install the client using PIP like so.
+To install a stable version use [PyPI](https://pypi.org/project/cruds/).
 
 ```bash
 pip install cruds
@@ -72,8 +75,83 @@ logging.basicConfig(level=logging.INFO)
 
 ### Extensibility
 
-The library has been created with extensibility in mind.  You can Sub Class Client
-for example and add the logic requirements needed to make the requests.
+The library has been created with extensibility in mind.  There is two ways that
+this can be done:
+
+ 1. Interface as Configuration
+ 2. Subclass the Client and add methods manually
+
+**Interface as Configuration**
+
+CRUDs supports creating interfaces with large amounts of models as configuration.
+This significantly reduces the amount of python coding needed, and the common
+methods can be reused.
+
+Within the CRUDs package preconfigured Interfaces have been created.  They are:
+ * Planhat - https://docs.planhat.com/
+
+#### How to create and use a custom interfaces
+
+Step 1 - Create the Interface configuration
+
+```yaml
+# catfactninja.yml
+version: 1
+api:
+  - name: CatFactNinja
+    docstring: |
+        New API.  Generated using Interface as Configuration.
+    package: catfactninja
+    models:
+     - name: fact
+       methods:
+        - get_multiple
+       uri: fact
+```
+
+Step 2 - Create the methods as python code that will handle the interface logic
+
+```python
+""" catfactninja.py """
+from cruds import Client
+
+def __init__(self):
+    """
+    This is the Interfaces initialization magic method.
+    """
+    self.client = Client(host="http://catfact.ninja/")
+
+def get_multiple(self, num=1):
+    """
+	Get multiple facts from the model as a generator.
+
+    The owner is the Interface Class. The Model URI is also added automatically
+    """
+
+	while num > 0:
+		yield self._owner.client.read(f"self._uri")
+		num -= 1
+```
+
+Step 3 - Load the configuration and import the interface
+
+```python
+from cruds.interfaces import load_config
+
+load_config("catfactninja.yml")
+from cruds.interfaces import CatFactNinja
+
+catfactninja = CatFactNinja()
+
+# Class Instance now has 'interface.model.logic'
+for fact in catfactninja.fact.get_multiple(3)
+	print(fact)
+```
+
+**Subclass Client**
+
+The approach is to create a new class and add the logic requirements needed to
+make the requests.
 
 ```python
 from cruds import Client
@@ -96,8 +174,10 @@ cat = CatFactNinja()
 print(cat.fact)
 ```
 
-## Todo List
+## To Do List
 - [ ] OAuth Client for Authentication
+- [ ] Interfaces as Configuration
+- [ ] Schema Validation
 
 ## License
 CRUDs is released under the MIT License. See the bundled LICENSE file for details.

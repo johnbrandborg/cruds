@@ -1,5 +1,5 @@
 import importlib
-import logging
+from logging import getLogger
 import os
 from typing import Any
 
@@ -7,7 +7,7 @@ from jsonschema import validate
 import yaml
 
 
-logger = logging.getLogger(__name__)
+logger= getLogger(__name__)
 
 DEFAULT_INTERFACE_CONF = f"{os.path.dirname(__file__)}/interfaces.yaml"
 INTERFACE_SCHEMA = f"{os.path.dirname(__file__)}/interfaces_schema.yaml"

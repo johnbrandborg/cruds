@@ -57,6 +57,7 @@ api:
           parents and children in a tree like structure.
         methods:
           - create
+          - update
           - get_lean_list
         uri: companies
 

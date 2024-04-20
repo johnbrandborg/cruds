@@ -1,10 +1,14 @@
 from collections.abc import Iterator
 from datetime import datetime
 from enum import Enum, unique
+from logging import getLogger
 from time import sleep
 from typing import Any, Union
 
 from cruds.core import Client
+
+logger = getLogger(__name__)
+
 
 # Interface Methods
 
