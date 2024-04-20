@@ -1,7 +1,7 @@
 import importlib
 from logging import getLogger
 import os
-from typing import Any
+from typing import Any, Callable
 
 from jsonschema import validate
 import yaml
@@ -9,8 +9,8 @@ import yaml
 
 logger= getLogger(__name__)
 
-DEFAULT_INTERFACE_CONF = f"{os.path.dirname(__file__)}/interfaces.yaml"
-INTERFACE_SCHEMA = f"{os.path.dirname(__file__)}/interfaces_schema.yaml"
+DEFAULT_INTERFACE_CONF = f"{os.path.dirname(__file__)}/interface_builtin.yaml"
+INTERFACE_SCHEMA = f"{os.path.dirname(__file__)}/interface_schema.yaml"
 
 
 class ModelFactory:
@@ -76,8 +76,13 @@ def _create_interfaces(config) -> None:
                     methods=method_map,
                 )
 
+            interface_methods: dict[str, Callable | None] = {
+                name: interface_code.__dict__.get(name)
+                for name in api.get("methods") or ["__init__"]
+            }
+
             Interface: Any = type(api["name"], (object,), {
-                '__init__': interface_code.__init__,
+                **interface_methods,
                 **models,
             })
             Interface.__doc__ = api.get("docstring")

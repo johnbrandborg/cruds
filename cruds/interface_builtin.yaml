@@ -58,7 +58,11 @@ api:
         methods:
           - create
           - update
+          - get_by_id
+          - get_list
           - get_lean_list
+          - delete
+          - bulk_upsert
         uri: companies
 
       - name: enduser

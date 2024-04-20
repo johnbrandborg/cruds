@@ -78,8 +78,8 @@ logging.basicConfig(level=logging.INFO)
 The library has been created with extensibility in mind.  There is two ways that
 this can be done:
 
- 1. Interface as Configuration
- 2. Subclass the Client and add methods manually
+1. Interface as Configuration
+2. Subclass the Client and add methods manually
 
 **Interface as Configuration**
 
@@ -88,7 +88,19 @@ This significantly reduces the amount of python coding needed, and the common
 methods can be reused.
 
 Within the CRUDs package preconfigured Interfaces have been created.  They are:
- * Planhat - https://docs.planhat.com/
+* Planhat - https://docs.planhat.com/
+
+#### How to use builtin interfaces
+
+Import them from `cruds.interfaces` like so:
+
+```python
+from cruds.interface import Planhat
+
+# For instructions on how to use the interface look at the help information
+help(Planhat)
+```
+
 
 #### How to create and use a custom interfaces
 
@@ -126,6 +138,7 @@ def get_multiple(self, num=1):
 	Get multiple facts from the model as a generator.
 
     The owner is the Interface Class. The Model URI is also added automatically
+    as private attributes.
     """
 
 	while num > 0:

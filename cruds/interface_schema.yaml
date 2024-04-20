@@ -13,6 +13,10 @@ properties:
           type: string
         docstring:
           type: string
+        methods:
+          type: array
+          items:
+            type: string
         default_model_methods:
           type: array
           items:
