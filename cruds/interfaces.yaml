@@ -13,7 +13,7 @@ api:
       supplied directly to the method.
 
       API Documentation: https://docs.planhat.com/#introduction
-
+    package: cruds.interface_methods.planhat
     default_model_methods:
       - create
       - update
@@ -21,14 +21,12 @@ api:
       - get_list
       - delete
       - bulk_upsert
-
     required_model_methods:
       - _bulk_upsert
       - _get_all_data
       - bulk_upsert_response_check
       - epoc_days_format
       - create_model_params
-
     models:
       - name: asset
         docstring: |

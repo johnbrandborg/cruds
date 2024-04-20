@@ -1,0 +1,46 @@
+type: object
+properties:
+  version:
+    type: number
+    enum:
+      - 1
+  api:
+    type: array
+    items:
+      type: object
+      properties:
+        name:
+          type: string
+        docstring:
+          type: string
+        default_model_methods:
+          type: array
+          items:
+            type: string
+        required_model_methods:
+          type: array
+          items:
+            type: string
+        models:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              docstring:
+                type: string
+              models:
+                type: array
+                items:
+                  type: string
+              uri:
+                type: string
+            required:
+              - name
+              - uri
+      required:
+        - name
+        - package
+required:
+  - version

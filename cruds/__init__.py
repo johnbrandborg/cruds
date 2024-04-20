@@ -20,7 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 """
-RESTful is a simple API library for Humans, inspired by Python Requests
+CRUDs is a simple high level library for Humans, inspired by Python Requests
+and written URLLib3.
 """
 
 from .core import Client
