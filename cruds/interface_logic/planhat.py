@@ -13,13 +13,19 @@ logger = getLogger(__name__)
 
 # Interface Methods
 
-def __init__(self, company_id: str, **kwargs):
+def __init__(self,
+             company_id: str,
+             tenant_token=None,
+             calls_per_min=200,
+             **kwargs) -> None:
     self.client = Client(host=f"https://api.planhat.com/", **kwargs)
-    self.analytics_client = Client(host=f"https://analytics.planhat.com/",
-                                    **kwargs)
     self.company_id = company_id
-    self.delay = 0.3
+    self.tenant_token = tenant_token
+    self._delay = 60 / min(calls_per_min, 1)
     self.bulk_upsert_response = []
+
+    if tenant_token:
+        self.analytics_client = Client(host=f"https://analytics.planhat.com/", **kwargs)
 
 
 def bulk_upsert_response_check(self) -> None:
@@ -135,6 +141,17 @@ def get_list(self,
     yield from self._get_all_data(self._uri, params, max_requests)
 
 
+def bulk(self, data: dict) -> dict:
+    """
+    To push dimension data into Planhat is is required to specify the Tenant Token (tenantUUID) in
+    the request URL. This token is a simple uui identifier for your tenant and it can be found in
+    the Developer module under the Tokens section.
+    """
+    return self._owner.analytics_client.update(f"{self._uri}/{self._owner.tenant_token}",
+                                               data,
+                                               with_post=True)
+
+
 def bulk_upsert(self,
                 data: dict[Any, Any],
                 step=5000,
@@ -155,7 +172,7 @@ def bulk_upsert(self,
         next_reference = reference + step
         self._owner.bulk_upsert_response.append(operation(self._uri, data[reference:next_reference]))
         logger.info(f"  -> Bulk Records Delivered: {reference} - {next_reference - 1}")
-        sleep(self._owner.delay)
+        sleep(self._owner._delay)
 
     return self._owner.bulk_upsert_response
 
@@ -228,7 +245,7 @@ def _get_all_data(self, uri, params, max_requests) -> Iterator[dict[Any, Any]]:
 
 ## User Activity - Analytics Endpoint
 
-def create_activity(self, tenant_token: str, data: dict):
+def create_activity(self, data: dict):
     """
     Creates user activity.  Required data keys are email or externalId.
     Ensure you create the PlanHat instance with analytics set to True.
@@ -237,7 +254,7 @@ def create_activity(self, tenant_token: str, data: dict):
     tenant_token instead.
     """
 
-    return self._owner.analytics_client.create(f"{self._user_activity_uri}/{tenant_token}", data)
+    return self._owner.analytics_client.create(f"{self._uri}/{self._owner.tenant_token}", data)
 
 def segment(self, data: dict) -> dict:
     """
