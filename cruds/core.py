@@ -297,7 +297,7 @@ class Client:
         """
         logger.info(
             f"Method: {method}, Status Code: {response.status}, "
-            f"Data: {sys.getsizeof(response.data)} Bytes"
+            f"Memory: {sys.getsizeof(response.data)} Bytes"
         )
 
         if self.raise_status and response.status not in self.status_whitelist:

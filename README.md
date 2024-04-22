@@ -25,7 +25,6 @@ Features:
  * Retries with back-off
  * SSL Verification
  * Logging for monitoring
- * JSON Schema Validation
  * Interfaces as Configuration
 
 ### Installation
@@ -190,7 +189,6 @@ print(cat.fact)
 ## To Do List
 - [ ] OAuth Client for Authentication
 - [ ] Interfaces as Configuration
-- [ ] Schema Validation
 
 ## License
 CRUDs is released under the MIT License. See the bundled LICENSE file for details.

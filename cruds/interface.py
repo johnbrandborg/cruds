@@ -70,7 +70,7 @@ def _create_interfaces(config) -> None:
                     for name in method_list
                 }
 
-                models[model["name"]] = ModelFactory(
+                models[model["name"].lower()] = ModelFactory(
                     docstring=model.get("docstring"),
                     uri=model.get("uri"),
                     methods=method_map,
@@ -101,7 +101,7 @@ def load_config(config_file: str) -> None:
     with open(INTERFACE_SCHEMA) as sfile:
         config_schema = yaml.safe_load(sfile)
 
-    logger.warning("Validating configuration schema")
+    logger.info("Validating interface configuration schema")
     validate(instance=config, schema=config_schema)
 
     _create_interfaces(config)
