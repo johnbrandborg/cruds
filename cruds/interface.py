@@ -26,6 +26,9 @@ class ModelFactory:
         self.owner = owner
         self.name = name
 
+    def __delete__(self, obj) -> None:
+        del self.model
+
     def __get__(self, obj: object, objtype=None) -> Any:
         if not hasattr(self, "model"):
             Model: Any = type(self.name, (object,), {
@@ -39,56 +42,68 @@ class ModelFactory:
         return self.model
 
     def __set__(self, obj, value) -> None:
-        """ Read Only """
         pass
 
 
-def _create_interfaces(config) -> None:
+def _create_interfaces_v1(config: dict):
     """
-    Processes the Interface configuration and creates the Interface Class.
+    Processes the Interface configuration and creates the Interface Classes.
     """
-    if config["version"] == 1:
-        for api in config.get("api") or []:
-            interface_code = importlib.import_module(api["package"])
-            models: dict[str, object] = {}
+    for api in config.get("api") or []:
+        if package_name := api.get("package"):
+            package = importlib.import_module(package_name)
+            interface_code = package.__dict__
+        else:
+            interface_code = {}
 
-            for model in api.get("models") or []:
-                method_list: list[str] = []
+        models: dict[str, object] = {}
 
-                if api.get("required_model_methods"):
-                    method_list += api["required_model_methods"]
+        for model in api.get("models") or []:
+            method_list: list[str] = []
 
-                # Method declaration priority order.  Default is only used
-                # if the model doesn't have it.
-                method_list += (model.get("methods")
-                    or api.get("default_model_methods")
-                    or []
-                )
+            if api.get("required_model_methods"):
+                method_list += api["required_model_methods"]
 
-                method_map: dict[str, object] = {
-                    name: interface_code.__dict__.get(name)
-                    for name in method_list
-                }
+            # Method declaration priority order.  Default is only used
+            # if the model doesn't have it.
+            method_list += (model.get("methods")
+                or api.get("default_model_methods")
+                or []
+            )
 
-                models[model["name"].lower()] = ModelFactory(
-                    docstring=model.get("docstring"),
-                    uri=model.get("uri"),
-                    methods=method_map,
-                )
-
-            interface_methods: dict[str, Callable | None] = {
-                name: interface_code.__dict__.get(name)
-                for name in api.get("methods") or ["__init__"]
+            method_map: dict[str, object] = {
+                name: interface_code.get(name)
+                for name in method_list
             }
 
-            Interface: Any = type(api["name"], (object,), {
-                **interface_methods,
-                **models,
-            })
-            Interface.__doc__ = api.get("docstring")
-            globals()[api["name"]] = Interface
+            models[model["name"].lower()] = ModelFactory(
+                docstring=model.get("docstring"),
+                uri=model.get("uri"),
+                methods=method_map,
+            )
 
-            del Interface
+        interface_methods: dict[str, Callable | None] = {
+            name: interface_code.get(name)
+            for name in api.get("methods") or ["__init__"]
+        }
+
+        Interface: Any = type(api["name"], (object,), {
+            **interface_methods,
+            **models,
+        })
+        Interface.__doc__ = api.get("docstring")
+
+        yield (api["name"], Interface)
+
+
+def create_interfaces(config: dict) -> None:
+    """
+    Create Interface Classes in the globals so they can be imported
+    directly from CRUDs.
+    """
+    if config.get("version") == 1:
+        for name, interface in _create_interfaces_v1(config):
+            globals()[name] = interface
 
 
 def load_config(config_file: str) -> None:
@@ -104,7 +119,7 @@ def load_config(config_file: str) -> None:
     logger.info("Validating interface configuration schema")
     validate(instance=config, schema=config_schema)
 
-    _create_interfaces(config)
+    create_interfaces(config)
 
 
 load_config(DEFAULT_INTERFACE_CONF)
