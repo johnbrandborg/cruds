@@ -24,8 +24,18 @@ def __init__(self,
     self.company_id = company_id
     self.tenant_token = tenant_token
     self.bulk_upsert_response = []
+    self.calls_per_min = calls_per_min
 
-    self._delay = 60 / max(calls_per_min, 1)
+
+@property
+def calls_per_min(self) -> int:
+    return self._calls_per_min
+
+
+@calls_per_min.setter
+def calls_per_min(self, value) -> None:
+    self._calls_per_min = value
+    self._delay = 60 / max(min(value, 200), 1)
 
 
 def bulk_upsert_response_check(self) -> None:

@@ -16,6 +16,7 @@ api:
     package: cruds.interface_logic.planhat
     methods:
       - "__init__"
+      - calls_per_min
       - bulk_upsert_response_check
     default_model_methods:
       - create

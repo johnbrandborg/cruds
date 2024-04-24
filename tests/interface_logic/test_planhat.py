@@ -23,7 +23,9 @@ def test_Planhat_init(planhat):
     assert isinstance(planhat.client, Client)
     assert planhat.company_id == "c321"
     assert planhat.tenant_token == "t123"
+
     assert planhat._delay == 0.3
+    assert planhat.calls_per_min == 200
 
 
 def test_Planhat_bulk_upsert_response_check_empty(planhat):
