@@ -81,10 +81,10 @@ def test__create_interface_v1_with_no_package():
     assert issubclass(Interface, object)
     assert Interface.__doc__ == "Test Class docstring"
 
-    with pytest.raises(TypeError) as e_info:
+    with pytest.raises(TypeError) as excinfo:
         Interface()
 
-    assert "'NoneType' object is not callable" in repr(e_info)
+    assert "'NoneType' object is not callable" in str(excinfo.value)
 
 
 def test__create_interface_v1_with_package_and_models(monkeypatch):

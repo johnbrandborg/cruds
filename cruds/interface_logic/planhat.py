@@ -4,11 +4,13 @@ from logging import getLogger
 from time import sleep
 from typing import Any, Union
 
-from jsonschema import validate
-
 from cruds.core import Client
 
 logger = getLogger(__name__)
+
+
+class PlanhatUpsertError(BaseException):
+    pass
 
 
 # Interface Methods
@@ -41,7 +43,7 @@ def bulk_upsert_response_check(self) -> None:
             if "Errors" in key and isinstance(value, list)
         ):
             if error["count"]:
-                raise Exception(f"Errors found: {results[error['type']]}")
+                raise PlanhatUpsertError(f"Errors found: {results[error['type']]}")
 
             logger.info(f"{error['type']} check passed.")
 
