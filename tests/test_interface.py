@@ -3,6 +3,8 @@ Tests for the main Interface in CRUDs
 """
 
 from copy import deepcopy
+import importlib
+from os import stat
 
 import pytest
 
@@ -57,19 +59,18 @@ def test_ModelFactory_descriptor_setup(interface):
     assert interface.test.echo("foo") == "bar"
 
 
-def test__create__interface_v1_with_no_package():
+def test__create_interface_v1_with_no_package():
     """
     Create an Interface from the factory using Version 1.
     The configuration has no package, and no listed methods.
+
+    With no __init__ method the created class is also not callable anymore.
     """
     config = {
         "api": [
             {
                 "name": "TestClass",
                 "docstring": "Test Class docstring",
-                "detault_model_methods": [],
-                "required_model_methods": [],
-                "models": [],
             }
         ]
     }
@@ -82,5 +83,53 @@ def test__create__interface_v1_with_no_package():
 
     with pytest.raises(TypeError) as e_info:
         Interface()
+
+    assert "'NoneType' object is not callable" in repr(e_info)
+
+
+def test__create_interface_v1_with_package_and_models(monkeypatch):
+    """
+    Create an Interface from the factory using Version 1.
+    The configuration has no package, and no listed methods.
+    """
+
+    class MockPackage:
+        __dict__: dict[str, object] = {
+                "__init__": lambda _: None,
+                "echo": lambda _, x: "bar" if x == "foo" else "baz"
+            }
+
+        def __init__(self, name):
+            pass
+
+    monkeypatch.setattr(importlib, 'import_module', MockPackage)
+
+    config = {
+        "api": [
+            {
+                "name": "TestClass",
+                "docstring": "Test Class docstring",
+                "package": "cruds.interface.mocked",
+                "models": [
+                    {
+                        "name": "test_model",
+                        "methods": [
+                            "echo",
+                            "doesnt_exist",
+                        ]
+                    }
+                ],
+            }
+        ]
+    }
+
+    _, TestClass = cruds.interface._create_interfaces_v1(config).__next__()
+
+    test_instance = TestClass()
+
+    assert test_instance.test_model.echo("foo") == "bar"
+
+    with pytest.raises(TypeError) as e_info:
+        test_instance.test_model.doesnt_exist()
 
     assert "'NoneType' object is not callable" in repr(e_info)

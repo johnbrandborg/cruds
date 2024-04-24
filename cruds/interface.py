@@ -106,15 +106,15 @@ def create_interfaces(config: dict) -> None:
             globals()[name] = interface
 
 
-def load_config(config_file: str) -> None:
+def load_config(file_name: str) -> None:
     """
     Request the creation of Interface classes using the configuration file.
     """
-    with open(config_file) as cfile:
-        config = yaml.safe_load(cfile)
+    with open(file_name) as config_file:
+        config = yaml.safe_load(config_file)
 
-    with open(INTERFACE_SCHEMA) as sfile:
-        config_schema = yaml.safe_load(sfile)
+    with open(INTERFACE_SCHEMA) as schema_file:
+        config_schema = yaml.safe_load(schema_file)
 
     logger.info("Validating interface configuration schema")
     validate(instance=config, schema=config_schema)

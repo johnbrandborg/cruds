@@ -21,11 +21,9 @@ def __init__(self,
     self.client = Client(host=f"https://api.planhat.com/", **kwargs)
     self.company_id = company_id
     self.tenant_token = tenant_token
-    self._delay = 60 / min(calls_per_min, 1)
     self.bulk_upsert_response = []
 
-    if tenant_token:
-        self.analytics_client = Client(host=f"https://analytics.planhat.com/", **kwargs)
+    self._delay = 60 / max(calls_per_min, 1)
 
 
 def bulk_upsert_response_check(self) -> None:
@@ -55,7 +53,7 @@ def model_init(self, owner, uri):
     self._uri = uri
 
 
-def create(self, planid: str) -> dict:
+def create(self, data: dict) -> dict:
     """
     To create an entry it's required define a name and a valid companyId.
 
@@ -63,7 +61,7 @@ def create(self, planid: str) -> dict:
     command structure: "companyId": "extid-[company externalId]" or "companyId":
     "srcid-[company sourceId]".
     """
-    return self._owner.client.delete(f"{self._uri}/{planid}")
+    return self._owner.client.create(self._uri, data)
 
 
 def delete(self, planid: str) -> dict:
@@ -238,7 +236,7 @@ def _get_all_data(self, uri, params, max_requests) -> Iterator[dict[Any, Any]]:
             return
 
         params["offset"] += retrieved
-        sleep(self._owner.delay)
+        sleep(self._owner._delay)
 
     logger.info("Completed getting all data.")
 
@@ -254,9 +252,13 @@ def create_activity(self, data: dict):
     tenant_token instead.
     """
 
-    return self._owner.analytics_client.create(f"{self._uri}/{self._owner.tenant_token}", data)
+    if self._owner.tenant_token and not hasattr(self, "analytics_client"):
+        self.analytics_client = Client(host=f"https://analytics.planhat.com/")
 
-def segment(self, data: dict) -> dict:
+    return self.analytics_client.create(f"{self._uri}/{self._owner.tenant_token}", data)
+
+
+def segment(self, data: dict):
     """
     Segment can be used to send User Events (user tracking data) to Planhat.
     Required data keys are type, and trait.  trait is an object.
@@ -264,4 +266,9 @@ def segment(self, data: dict) -> dict:
     To use this method you must use the tenant token as the auth parameter
     for the instance creation.
     """
-    return self._owner.analytics_client.create("dock/segment", data)
+
+    if self._owner.tenant_token and not hasattr(self, "segment_client"):
+        self.segment_client = Client(host=f"https://analytics.planhat.com/",
+                                     auth=(self._owner.tenant_token,""))
+
+    return self.segment_client.create("dock/segment", data)
