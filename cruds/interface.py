@@ -1,7 +1,7 @@
 import importlib
 from logging import getLogger
 import os
-from typing import Any, Callable
+from typing import Any, Callable, List
 
 from jsonschema import validate
 import yaml
@@ -59,7 +59,7 @@ def _create_interfaces_v1(config: dict):
         models: dict[str, object] = {}
 
         for model in api.get("models") or []:
-            method_list: list[str] = []
+            method_list: List[str] = []
 
             if api.get("required_model_methods"):
                 method_list += api["required_model_methods"]

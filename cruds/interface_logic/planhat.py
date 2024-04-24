@@ -2,7 +2,7 @@ from collections.abc import Iterator
 from datetime import datetime
 from logging import getLogger
 from time import sleep
-from typing import Any, Union
+from typing import Any, Union, List
 
 from cruds.core import Client
 
@@ -99,7 +99,7 @@ def get_by_id(self, identification) -> dict:
     return self._owner.client.read(f"{self._uri}/{identification}")
 
 
-def get_lean_list(self, external_id=None, source_id=None, status=None) -> list[dict]:
+def get_lean_list(self, external_id=None, source_id=None, status=None) -> List[dict]:
     """
     When you need a lightweight list of all companies in Planhat to match against
     your own ids etc.
@@ -166,7 +166,7 @@ def bulk_upsert(self,
                 data: dict[Any, Any],
                 step=5000,
                 with_post=False,
-                ) -> list[dict[str, Union[int, list[str]]]]:
+                ) -> List[dict[str, Union[int, List[str]]]]:
     """
     Takes data in form of JSON and updates entries already in PlanHat.
     (Limit of 5,000 items per request)
