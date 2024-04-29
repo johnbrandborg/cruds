@@ -4,11 +4,21 @@ Tests for the main Interface in CRUDs
 
 from copy import deepcopy
 import importlib
-from os import stat
+from typing import Dict
 
 import pytest
 
 import cruds.interface
+
+
+class Interface:
+    test = cruds.interface.ModelFactory(
+        docstring="Model Class",
+        uri="test",
+        methods={
+            "echo": lambda _, x: "bar" if x == "foo" else "baz"
+        },
+    )
 
 
 @pytest.fixture
@@ -17,7 +27,7 @@ def interface():
     class Interface:
         test = cruds.interface.ModelFactory(
             docstring="Model Class",
-            uri="test",
+            uri="test_uri",
             methods={
                 "echo": lambda _, x: "bar" if x == "foo" else "baz"
             },
@@ -26,16 +36,17 @@ def interface():
     return Interface()
 
 
-def test_ModelFactory_descriptor_delete(interface):
+def test_ModelFactory_descriptor_delete():
     """
     Test that the delete magic method removes the model class which is
     recreated by get magic method
     """
-    method_id = repr(interface.test)
+    interface = Interface()
+    method_id = id(interface.test)
 
     del interface.test
 
-    assert repr(interface.test) != method_id
+    assert id(interface.test) != method_id
 
 
 def test_ModelFactory_descriptor_set(interface):
@@ -55,7 +66,7 @@ def test_ModelFactory_descriptor_setup(interface):
     """
 
     assert interface.test.__doc__ == "Model Class"
-    assert interface.test._uri == "test"
+    assert interface.test._uri == "test_uri"
     assert interface.test.echo("foo") == "bar"
 
 
@@ -94,12 +105,12 @@ def test__create_interface_v1_with_package_and_models(monkeypatch):
     """
 
     class MockPackage:
-        __dict__: dict[str, object] = {
+        __dict__: Dict[str, object] = {
                 "__init__": lambda _: None,
                 "echo": lambda _, x: "bar" if x == "foo" else "baz"
             }
 
-        def __init__(self, name):
+        def __init__(self, name) -> None:
             pass
 
     monkeypatch.setattr(importlib, 'import_module', MockPackage)

@@ -1,8 +1,7 @@
-from collections.abc import Iterator
 from datetime import datetime
 from logging import getLogger
 from time import sleep
-from typing import Any, Union, List
+from typing import Any, Dict, Generator, List, Union
 
 from cruds.core import Client
 
@@ -60,7 +59,7 @@ def bulk_upsert_response_check(self) -> None:
 
 # Model Methods
 
-def model_init(self, owner, uri):
+def model_init(self, owner, uri) -> None:
     self._owner = owner
     self._uri = uri
 
@@ -76,11 +75,11 @@ def create(self, data: dict) -> dict:
     return self._owner.client.create(self._uri, data)
 
 
-def delete(self, planid: str) -> dict:
+def delete(self, identification: str) -> dict:
     """
     Deletes an entry in PlanHat by PlanID
     """
-    return self._owner.client.delete(f"{self._uri}/{planid}")
+    return self._owner.client.delete(f"{self._uri}/{identification}")
 
 
 def update(self, identification: str, data: dict) -> dict:
@@ -136,12 +135,12 @@ def get_list(self,
              select: str = "name, companyId",
              limit: int = 2000,
              max_requests: int = 0,
-             ) -> Iterator[dict[Any, Any]]:
+             ) -> Generator:
     """
     Creates a generator that retrieves yields the data as Dictionaries
     Select can be an empty string, but defaults to those fields needed for creation.
     """
-    params = {
+    params: Dict[str, Union[str, int]] = {
         "sort": sort,
         "select": select,
         "limit": max(limit, 1),
@@ -163,10 +162,10 @@ def bulk(self, data: dict) -> dict:
 
 
 def bulk_upsert(self,
-                data: dict[Any, Any],
+                data: Dict[Any, Any],
                 step=5000,
                 with_post=False,
-                ) -> List[dict[str, Union[int, List[str]]]]:
+                ) -> List[Dict[str, Union[int, List[str]]]]:
     """
     Takes data in form of JSON and updates entries already in PlanHat.
     (Limit of 5,000 items per request)
@@ -205,13 +204,13 @@ def get_dimension_data(
     dimension_id=None,
     limit=10000,
     max_requests=0,
-) -> Iterator[dict[Any, Any]]:
+) -> Generator:
     """
     A generator that retrieves all dimensiondata for a given time range.
     """
     limit = max(limit, 1)
 
-    params: dict[str, Any] = {
+    params: Dict[str, Any] = {
         "from": self.epoc_days_format(from_day),
         "to": self.epoc_days_format(to_day),
         "limit": limit,
@@ -227,7 +226,7 @@ def get_dimension_data(
     yield from self._get_all_data(self._uri, params, max_requests)
 
 
-def _get_all_data(self, uri, params, max_requests) -> Iterator[dict[Any, Any]]:
+def _get_all_data(self, uri, params, max_requests) -> Generator:
     """
     A generator that retrieves all model data for a given selection
     """
@@ -255,7 +254,7 @@ def _get_all_data(self, uri, params, max_requests) -> Iterator[dict[Any, Any]]:
 
 ## User Activity - Analytics Endpoint
 
-def create_activity(self, data: dict):
+def create_activity(self, data: dict) -> Union[Dict[Any, Any], bytes]:
     """
     Creates user activity.  Required data keys are email or externalId.
     Ensure you create the PlanHat instance with analytics set to True.
@@ -270,7 +269,7 @@ def create_activity(self, data: dict):
     return self.analytics_client.create(f"{self._uri}/{self._owner.tenant_token}", data)
 
 
-def segment(self, data: dict):
+def segment(self, data: dict) -> Union[Dict[Any, Any], bytes]:
     """
     Segment can be used to send User Events (user tracking data) to Planhat.
     Required data keys are type, and trait.  trait is an object.

@@ -27,9 +27,16 @@ class ModelFactory:
         self.name = name
 
     def __delete__(self, obj) -> None:
+        """
+        Remove the Model Class so it can be recreated.
+        """
         del self.model
 
     def __get__(self, obj: object, objtype=None) -> Any:
+        """
+        Create a Model Class with the owner for client access, and the URI
+        for making CRUDs to the API.
+        """
         if not hasattr(self, "model"):
             Model: Any = type(self.name, (object,), {
                 "_owner": obj,
@@ -42,6 +49,9 @@ class ModelFactory:
         return self.model
 
     def __set__(self, obj, value) -> None:
+        """
+        Setting the attribute will do nothing.
+        """
         pass
 
 

@@ -2,17 +2,32 @@
 Tests for Planhat interface logic in CRUDs
 """
 
+from unittest.mock import Mock
+
 import pytest
 
 from cruds import Client
+from cruds import interface
 from cruds.interface import Planhat
-from cruds.interface_logic.planhat import PlanhatUpsertError
+from cruds.interface_logic.planhat import *
 
 
 @pytest.fixture
 def planhat():
     planhat = Planhat(company_id="c321", tenant_token="t123")
     return planhat
+
+
+@pytest.fixture
+def planhat_model():
+    class Model:
+        __init__ = model_init
+        create = create
+        delete = delete
+        get_by_id = get_by_id
+        update = update
+
+    return Model(Mock(), "planhat_model_uri")
 
 
 def test_Planhat_init(planhat):
@@ -82,3 +97,68 @@ def test_Planhat_bulk_upsert_response_check_with_errors(planhat):
         planhat.bulk_upsert_response_check()
 
     assert "Errors found: ['email duplicated']" == str(excinfo.value)
+
+
+def test_Planhat_model_init(planhat_model):
+    """
+    The Model Class instances should have the relevant attributes to
+    function properly
+    """
+
+    assert planhat_model._uri == "planhat_model_uri"
+    assert hasattr(planhat_model, "_owner") \
+            and isinstance(planhat_model._owner, Mock)
+
+
+def test_Planhat_create(planhat_model):
+    """
+    Test the create request to planhat
+    """
+
+    create_sample = {"_id": "1"}
+    planhat_model.create(data=create_sample)
+    planhat_model._owner.client.create.assert_called_with(
+        'planhat_model_uri',
+        create_sample
+    )
+
+
+def test_Planhat_delete(planhat_model):
+    """
+    Test the create request to planhat
+    """
+
+    native_id = "3248234"
+    planhat_model.delete(native_id)
+
+    planhat_model._owner.client.delete.assert_called_with(
+        f"planhat_model_uri/{native_id}"
+    )
+
+
+def test_Planhat_update(planhat_model):
+    """
+    Test the update request to planhat
+    """
+
+    native_id = "3248234"
+    update_sample = {"name": "John"}
+    planhat_model.update(native_id, update_sample)
+
+    planhat_model._owner.client.update.assert_called_with(
+        f"planhat_model_uri/{native_id}",
+        update_sample
+    )
+
+
+
+def test_Planhat_get_by_id(planhat_model):
+    """
+    Test the get_by_id request to planhat
+    """
+
+    native_id = "3248234"
+    planhat_model.get_by_id(native_id)
+    planhat_model._owner.client.read.assert_called_with(
+        f"planhat_model_uri/{native_id}",
+    )
