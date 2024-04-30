@@ -8,7 +8,7 @@ develop:
 	@python -m pip install -e .[develop]
 
 clean:
-	@find . -name '__pycache__' | xargs rm -fr;\
+	@find $(PACKAGES) -type d -name __pycache__ -prune -exec rm -rfv {} \;
 		echo "Clean completed"
 
 help:

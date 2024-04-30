@@ -9,7 +9,6 @@ import yaml
 
 logger= getLogger(__name__)
 
-DEFAULT_INTERFACE_CONF = f"{os.path.dirname(__file__)}/interface_builtin.yaml"
 INTERFACE_SCHEMA = f"{os.path.dirname(__file__)}/interface_schema.yaml"
 
 
@@ -106,17 +105,7 @@ def _create_interfaces_v1(config: dict):
         yield (api["name"], Interface)
 
 
-def create_interfaces(config: dict) -> None:
-    """
-    Create Interface Classes in the globals so they can be imported
-    directly from CRUDs.
-    """
-    if config.get("version") == 1:
-        for name, interface in _create_interfaces_v1(config):
-            globals()[name] = interface
-
-
-def load_config(file_name: str) -> None:
+def load_config(file_name: str):
     """
     Request the creation of Interface classes using the configuration file.
     """
@@ -129,7 +118,6 @@ def load_config(file_name: str) -> None:
     logger.info("Validating interface configuration schema")
     validate(instance=config, schema=config_schema)
 
-    create_interfaces(config)
-
-
-load_config(DEFAULT_INTERFACE_CONF)
+    if config.get("version") == 1:
+        for interface in _create_interfaces_v1(config):
+             yield interface

@@ -7,9 +7,8 @@ from unittest.mock import Mock
 import pytest
 
 from cruds import Client
-from cruds import interface
-from cruds.interface import Planhat
-from cruds.interface_logic.planhat import *
+from cruds.interfaces.planhat import Planhat
+from cruds.interfaces.planhat.models import *
 
 
 @pytest.fixture

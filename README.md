@@ -94,7 +94,7 @@ Within the CRUDs package preconfigured Interfaces have been created.  They are:
 Import them from `cruds.interfaces` like so:
 
 ```python
-from cruds.interface import Planhat
+from cruds.interfaces.planhat import Planhat
 
 # For instructions on how to use the interface look at the help information
 help(Planhat)
