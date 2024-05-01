@@ -128,7 +128,7 @@ def get_lean_list(self, external_id=None, source_id=None, status=None) -> List[d
         else:
             company_params["status"] = str(status)
 
-    return self._owner.client.read("leancompanies", params=company_params)
+    return self._owner.client.read(f"leancompanies", params=company_params)
 
 
 def get_list(self,

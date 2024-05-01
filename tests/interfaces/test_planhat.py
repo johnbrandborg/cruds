@@ -8,7 +8,7 @@ import pytest
 
 from cruds import Client
 from cruds.interfaces.planhat import Planhat
-from cruds.interfaces.planhat.models import *
+from cruds.interfaces.planhat.logic import *
 
 
 @pytest.fixture

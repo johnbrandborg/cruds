@@ -13,7 +13,7 @@ api:
       supplied directly to the method.
 
       API Documentation: https://docs.planhat.com/#introduction
-    package: cruds.interfaces.planhat.models
+    package: cruds.interfaces.planhat.logic
     methods:
       - "__init__"
       - calls_per_min
