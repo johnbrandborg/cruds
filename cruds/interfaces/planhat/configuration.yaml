@@ -15,9 +15,10 @@ api:
       API Documentation: https://docs.planhat.com/#introduction
     package: cruds.interfaces.planhat.logic
     methods:
-      - "__init__"
+      - __init__
       - calls_per_min
       - bulk_upsert_response_check
+      - tenant_token
     default_model_methods:
       - create
       - update
@@ -26,7 +27,6 @@ api:
       - delete
       - bulk_upsert
     required_model_methods:
-      - _bulk_upsert
       - _get_all_data
     models:
       - name: Asset

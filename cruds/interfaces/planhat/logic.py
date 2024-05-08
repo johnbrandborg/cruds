@@ -20,8 +20,7 @@ def __init__(self,
              tenant_token=None,
              calls_per_min=200,
              **kwargs) -> None:
-    self.client = Client(host=PLANHAT_API_HOST, **kwargs)
-    self.company_id = company_id
+    self.client = Client(host=PLANHAT_API_HOST, auth=company_id, **kwargs)
     self.tenant_token = tenant_token
     self.bulk_upsert_response = []
     self.calls_per_min = calls_per_min
@@ -36,6 +35,32 @@ def calls_per_min(self) -> int:
 def calls_per_min(self, value) -> None:
     self._calls_per_min = value
     self._delay = 60 / max(min(value, 200), 1)
+
+
+@staticmethod
+def epoc_days_format(date: str, reference="1970-01-01") -> int:
+    """
+    Takes an ISO formatted datetime string and returns the amount of lapsed
+    that has lapsed.  Default reference is 1st January 1970.
+    """
+    return (datetime.fromisoformat(date) - datetime.fromisoformat(reference)).days
+
+
+@property
+def tenant_token(self) -> str:
+    if self.__tenant_token is None:
+        raise RuntimeError("No tenant token has been supplied")
+
+    return self.__tenant_token
+
+
+@tenant_token.setter
+def tenant_token(self, value) -> None:
+    self.__tenant_token = value
+
+    if value is not None:
+        self.client_analytics = Client(host=PLANHAT_ANALYTICS_HOST,
+                                       auth=(value, ""))
 
 
 def bulk_upsert_response_check(self) -> None:
@@ -76,6 +101,31 @@ def create(self, data: dict) -> dict:
     return self._owner.client.create(self._uri, data)
 
 
+def bulk_upsert(self,
+                data: Dict[Any, Any],
+                step=5000,
+                with_post=False,
+                ) -> List[Dict[str, Union[int, List[str]]]]:
+    """
+    Takes data in form of JSON and updates entries already in PlanHat.
+    (Limit of 5,000 items per request)
+
+    To create an asset it's required define a name and a valid companyId.
+    To update an asset it is required to specify in the payload one of the
+    following keyables: _id, sourceId and/or externalId.
+    """
+    self._owner.bulk_upsert_response.clear()
+    operation = self.create if with_post else self.update
+
+    for reference in range(0, len(data), step):
+        next_reference: int = reference + step
+        self._owner.bulk_upsert_response.append(operation(self._uri, data[reference:next_reference]))
+        logger.info(f"  -> Bulk Records Delivered: {reference} - {next_reference - 1}")
+        sleep(self._owner._delay)
+
+    return self._owner.bulk_upsert_response
+
+
 def delete(self, identification: str) -> dict:
     """
     Deletes an entry in PlanHat by PlanID
@@ -114,7 +164,7 @@ def get_lean_list(self, external_id=None, source_id=None, status=None) -> List[d
     status: Company status, e.g. "lost", "prospect".
     """
 
-    company_params = {}
+    company_params: dict[str, Any] = {}
 
     if external_id:
         company_params["externalId"] = str(external_id)
@@ -124,11 +174,47 @@ def get_lean_list(self, external_id=None, source_id=None, status=None) -> List[d
 
     if status:
         if isinstance(status, (list, tuple)):
-            company_params["status"] = ",".join(status)
+            company_params["status"] = status
         else:
-            company_params["status"] = str(status)
+            company_params["status"] = [item.strip() for item in status.split(",")]
 
     return self._owner.client.read(f"leancompanies", params=company_params)
+
+
+def get_dimension_data(self,
+                       from_day: Union[int, str],
+                       to_day: Union[int, str],
+                       company_id=None,
+                       dimension_id=None,
+                       limit=10000,
+                       max_requests=0,
+                       ) -> Generator:
+    """
+    When fetching dimension data there are some options that can be used via query params:
+
+    company_id: Id of company.
+    dimension_id: Id of the dimension data.
+    from_day: Epoc days integer or ISO formatted date string.
+    to: Epoc days integer or ISO formatted date string.
+    limit: Limit the list length.
+    max_requests: maximum number of requests to make.
+    """
+    limit = max(limit, 1)
+
+    params: Dict[str, Any] = {
+        "from": self.epoc_days_format(from_day) if isinstance(from_day, str) else from_day,
+        "to": self.epoc_days_format(to_day) if isinstance(to_day, str) else to_day,
+        "limit": limit,
+        "offset": 0,
+    }
+
+    if company_id:
+        params["cId"] = company_id
+
+    if dimension_id:
+        params["dimid"] = dimension_id
+
+    yield from self._get_all_data(self._uri, params, max_requests)
 
 
 def get_list(self,
@@ -151,92 +237,16 @@ def get_list(self,
     yield from self._get_all_data(self._uri, params, max_requests)
 
 
-def bulk(self, data: dict) -> dict:
-    """
-    To push dimension data into Planhat is is required to specify the Tenant Token (tenantUUID) in
-    the request URL. This token is a simple uui identifier for your tenant and it can be found in
-    the Developer module under the Tokens section.
-    """
-    return self._owner.analytics_client.update(f"{self._uri}/{self._owner.tenant_token}",
-                                               data,
-                                               with_post=True)
-
-
-def bulk_upsert(self,
-                data: Dict[Any, Any],
-                step=5000,
-                with_post=False,
-                ) -> List[Dict[str, Union[int, List[str]]]]:
-    """
-    Takes data in form of JSON and updates entries already in PlanHat.
-    (Limit of 5,000 items per request)
-
-    To create an asset it's required define a name and a valid companyId.
-    To update an asset it is required to specify in the payload one of the
-    following keyables: _id, sourceId and/or externalId.
-    """
-    self._owner.bulk_upsert_response.clear()
-    operation = self.create if with_post else self.update
-
-    for reference in range(0, len(data), step):
-        next_reference = reference + step
-        self._owner.bulk_upsert_response.append(operation(self._uri, data[reference:next_reference]))
-        logger.info(f"  -> Bulk Records Delivered: {reference} - {next_reference - 1}")
-        sleep(self._owner._delay)
-
-    return self._owner.bulk_upsert_response
-
-
-
-@staticmethod
-def epoc_days_format(date: str, reference="1970-01-01") -> int:
-    """
-    Takes an ISO formatted datetime string and returns the amount of lapsed
-    that has lapsed.  Default reference is 1st January 1970.
-    """
-    return (datetime.fromisoformat(date) - datetime.fromisoformat(reference)).days
-
-
-def get_dimension_data(
-    self,
-    from_day: str,
-    to_day: str,
-    company_id=None,
-    dimension_id=None,
-    limit=10000,
-    max_requests=0,
-) -> Generator:
-    """
-    A generator that retrieves all dimensiondata for a given time range.
-    """
-    limit = max(limit, 1)
-
-    params: Dict[str, Any] = {
-        "from": self.epoc_days_format(from_day),
-        "to": self.epoc_days_format(to_day),
-        "limit": limit,
-        "offset": 0,
-    }
-
-    if company_id:
-        params["cId"] = company_id
-
-    if dimension_id:
-        params["dimid"] = dimension_id
-
-    yield from self._get_all_data(self._uri, params, max_requests)
-
-
 def _get_all_data(self, uri, params, max_requests) -> Generator:
     """
     A generator that retrieves all model data for a given selection
     """
-    retrieved = 0
-    requests = 0
+    retrieved: int = 0
+    requests: int = 0
 
     while retrieved >= params["limit"] or requests == 0:
-        data = self._owner.client.read(uri, params)
-        retrieved = len(data)
+        data: dict = self._owner.client.read(uri, params)
+        retrieved: int = len(data)
         requests += 1
 
         logger.info(f"  -> Records Retrieved: {params['offset'] + retrieved}")
@@ -255,6 +265,17 @@ def _get_all_data(self, uri, params, max_requests) -> Generator:
 
 ## User Activity - Analytics Endpoint
 
+def api_bulk(self, data: dict) -> dict:
+    """
+    To push dimension data into Planhat it is required to specify the Tenant Token (tenantUUID) in
+    the request URL. This token is a simple uui identifier for your tenant and it can be found in
+    the Developer module under the Tokens section.
+    """
+    return self._owner.client_analytics.update(f"{self._uri}/{self._owner.tenant_token}",
+                                               data,
+                                               with_post=True)
+
+
 def create_activity(self, data: dict) -> Union[Dict[Any, Any], bytes]:
     """
     Creates user activity.  Required data keys are email or externalId.
@@ -263,11 +284,8 @@ def create_activity(self, data: dict) -> Union[Dict[Any, Any], bytes]:
     To use this method you don't need an API auth token.  Just supply the
     tenant_token instead.
     """
-
-    if self._owner.tenant_token and not hasattr(self, "analytics_client"):
-        self.analytics_client = Client(host=PLANHAT_ANALYTICS_HOST)
-
-    return self.analytics_client.create(f"{self._uri}/{self._owner.tenant_token}", data)
+    return self._owner.client_analytics.create(f"{self._uri}/{self._owner.tenant_token}",
+                                               data)
 
 
 def segment(self, data: dict) -> Union[Dict[Any, Any], bytes]:
@@ -278,9 +296,6 @@ def segment(self, data: dict) -> Union[Dict[Any, Any], bytes]:
     To use this method you must use the tenant token as the auth parameter
     for the instance creation.
     """
-
-    if self._owner.tenant_token and not hasattr(self, "segment_client"):
-        self.segment_client = Client(host=PLANHAT_ANALYTICS_HOST,
-                                     auth=(self._owner.tenant_token,""))
-
-    return self.segment_client.create("dock/segment", data)
+    # Retrieve tenant_token even though not used, to ensure client is created.
+    self.tenant_token
+    return self._owner.client_analytics.create("dock/segment", data)
