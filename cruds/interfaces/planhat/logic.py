@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import datetime
 from logging import getLogger
 from time import sleep
@@ -16,11 +17,11 @@ PLANHAT_ANALYTICS_HOST = "https://analytics.planhat.com/"
 # Interface Methods
 
 def __init__(self,
-             company_id: str,
+             api_token: str,
              tenant_token=None,
              calls_per_min=200,
              **kwargs) -> None:
-    self.client = Client(host=PLANHAT_API_HOST, auth=company_id, **kwargs)
+    self.client = Client(host=PLANHAT_API_HOST, auth=api_token, **kwargs)
     self.tenant_token = tenant_token
     self.bulk_upsert_response = []
     self.calls_per_min = calls_per_min
@@ -241,23 +242,27 @@ def _get_all_data(self, uri, params, max_requests) -> Generator:
     """
     A generator that retrieves all model data for a given selection
     """
+    updated_params = deepcopy(params)
+
     retrieved: int = 0
     requests: int = 0
 
-    while retrieved >= params["limit"] or requests == 0:
-        data: dict = self._owner.client.read(uri, params)
+    # If we retrive less than the limit the API is indicating it has no more
+    # data left to give.  Also requests set to 0 will loop for ever.
+    while retrieved >= updated_params["limit"] or requests == 0:
+        data: dict = self._owner.client.read(uri, updated_params)
         retrieved: int = len(data)
         requests += 1
 
-        logger.info(f"  -> Records Retrieved: {params['offset'] + retrieved}")
+        logger.info(f"  -> Records Retrieved: {updated_params['offset'] + retrieved}")
 
         yield data
 
         if requests >= max_requests and max_requests != 0:
             logger.info("Max requests reached.")
-            return
+            break
 
-        params["offset"] += retrieved
+        updated_params["offset"] += retrieved
         sleep(self._owner._delay)
 
     logger.info("Completed getting all data.")
@@ -297,5 +302,5 @@ def segment(self, data: dict) -> Union[Dict[Any, Any], bytes]:
     for the instance creation.
     """
     # Retrieve tenant_token even though not used, to ensure client is created.
-    self.tenant_token
+    self._owner.tenant_token
     return self._owner.client_analytics.create("dock/segment", data)

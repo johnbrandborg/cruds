@@ -3,7 +3,9 @@ Tests for Planhat interface logic in CRUDs
 """
 
 from collections.abc import Generator
+from copy import deepcopy
 import json
+from re import I
 from unittest.mock import MagicMock, Mock
 
 import pytest
@@ -11,13 +13,12 @@ import pytest
 from cruds import Client
 from cruds.interfaces.planhat import Planhat
 from cruds.interfaces.planhat.logic import *
-from cruds.interfaces.planhat.logic import (
-    _get_all_data,
-)
+from cruds.interfaces.planhat.logic import _get_all_data
 
 
-TEST_COMPANY_ID = "c321"
-TEST_TENANT_ID = "t123"
+TEST_API_TOKEN = "9PhAfMO3WllHUmmhJA4eO3tJPhDck1aKLvQ5osvNUfKYdJ7H"
+TEST_COMPANY_ID = "8IfbCnRP4HGAarzxVop1AS3I"
+TEST_TENANT_TOKEN = "1d5df0f5-f217-49da-8997-2878f5986a9f"
 
 EXAMPLE_GET_DIMENSION_DATA = json.loads("""\
 [
@@ -70,9 +71,22 @@ EXAMPLE_GET_LIST_DATA = json.loads("""\
 """)
 
 
+def api_responses(example_data, number) -> Generator:
+    """
+    Takes an example payload, and returns chunks like the Planhat API does.
+    If the API returns two responses perfectly againsts the limit an extract
+    request is made by the Interface with no data returned so it understands
+    to stop making requests.
+    """
+    for i in range(0, len(example_data), number):
+        yield example_data[i:i + number]
+
+    yield []
+
+
 @pytest.fixture
 def planhat():
-    planhat = Planhat(company_id=TEST_COMPANY_ID)
+    planhat = Planhat(TEST_API_TOKEN, tenant_token=TEST_TENANT_TOKEN)
     return planhat
 
 
@@ -83,6 +97,7 @@ def planhat_model():
         _get_all_data = _get_all_data
         api_bulk = api_bulk
         create = create
+        create_activity = create_activity
         delete = delete
         epoc_days_format = epoc_days_format
         get_by_id = get_by_id
@@ -90,17 +105,23 @@ def planhat_model():
         get_lean_list = get_lean_list
         get_list = get_list
         update = update
+        segment = segment
 
-    return Model(Mock(), "planhat_model_uri")
+    model = Model(Mock(), "planhat_model_uri")
+    model._owner._delay = 0
+    model._owner.tenant_token = TEST_TENANT_TOKEN
+
+    return model
 
 
 def test_Planhat_init(planhat):
     """
     Check to see if the init holds the company_id, and delay for rate limiting
     """
+    EXCEPTED_AUTH_HEADER = "Bearer 9PhAfMO3WllHUmmhJA4eO3tJPhDck1aKLvQ5osvNUfKYdJ7H"
 
     assert isinstance(planhat.client, Client)
-    assert planhat.client._http.headers["Authorization"].endswith(TEST_COMPANY_ID)
+    assert planhat.client._http.headers["Authorization"] == EXCEPTED_AUTH_HEADER
 
     assert planhat._delay == 0.3
     assert planhat.calls_per_min == 200
@@ -112,9 +133,9 @@ def test_Planhat_init_analytics():
     API
     """
 
-    planhat = Planhat(company_id=TEST_COMPANY_ID, tenant_token=TEST_TENANT_ID)
+    planhat = Planhat(TEST_API_TOKEN, tenant_token=TEST_TENANT_TOKEN)
 
-    assert planhat.tenant_token == TEST_TENANT_ID
+    assert planhat.tenant_token == TEST_TENANT_TOKEN
     assert isinstance(planhat.client_analytics, Client)
 
 
@@ -123,7 +144,7 @@ def test_Planhat_init_analytics_with_no_tenant_token():
     If no tenant token is supplied, trying to retrieve it raises an exception
     """
 
-    planhat = Planhat(company_id=TEST_COMPANY_ID)
+    planhat = Planhat(TEST_API_TOKEN)
 
     with pytest.raises(RuntimeError):
         planhat.tenant_token
@@ -397,10 +418,82 @@ def test_Model_get_list_generator(planhat_model):
         0,
     )
 
+def test_Model__get_all_data_standard(planhat_model):
+    planhat_model._owner.client.read.return_value = EXAMPLE_GET_DIMENSION_DATA
+
+    uri, params = "get_all_standard_uri", {"limit": 2000, "offset": 0}
+
+    for index, data in enumerate(planhat_model._get_all_data(uri, params, 0)):
+
+        planhat_model._owner.client.read.assert_called_with(uri, params)
+        assert data == EXAMPLE_GET_DIMENSION_DATA
+
+    assert index == 0
+
+
+def test_Model__get_all_data_max_requests(planhat_model):
+    step_size: int = 1
+    planhat_model._owner.client.read.side_effect = api_responses(
+        EXAMPLE_GET_DIMENSION_DATA, step_size
+    )
+
+    uri, params = "get_all_max_requests_uri", {"limit": step_size, "offset": 0}
+
+    for index, data in enumerate(planhat_model._get_all_data(uri, params, 1)):
+
+        planhat_model._owner.client.read.assert_called_with(uri, params)
+        assert data == [EXAMPLE_GET_DIMENSION_DATA[index]]
+
+    assert index == 0
+
+
+def test_Model__get_all_data_with_limit_one(planhat_model):
+    step_size: int = 1
+    planhat_model._owner.client.read.side_effect = api_responses(
+        EXAMPLE_GET_DIMENSION_DATA, step_size
+    )
+
+    uri, params = "get_all_limit_one_uri", {"limit": step_size, "offset": 0}
+    updated_params = deepcopy(params)
+
+    for index, data in enumerate(planhat_model._get_all_data(uri, params, 0)):
+        step: int = index * step_size
+
+        planhat_model._owner.client.read.assert_called_with(uri, updated_params)
+        assert data == EXAMPLE_GET_DIMENSION_DATA[step:step + step_size]
+
+        updated_params["offset"] += step_size
+        print("INDEX", index)
+
+    assert index == 3
+
+
+def test_Model__get_all_data_with_limit_two(planhat_model):
+    step_size: int = 2
+    planhat_model._owner.client.read.side_effect = api_responses(
+        EXAMPLE_GET_DIMENSION_DATA, step_size
+    )
+
+
+    uri, params = "get_all_limit_two_uri", {"limit": step_size, "offset": 0}
+    updated_params = deepcopy(params)
+
+    for index, data in enumerate(planhat_model._get_all_data(uri, params, 0)):
+        step: int = index * step_size
+
+        planhat_model._owner.client.read.assert_called_with(uri, updated_params)
+        assert data == EXAMPLE_GET_DIMENSION_DATA[step:step + step_size]
+
+        updated_params["offset"] += step_size
+
+    assert index == 1
+
+
+## Analytics Endpoint Tests
 
 def test_Model_api_bulk(planhat_model):
     """
-    Test the bulk request to planhat
+    Test the API bulk request to planhat
     """
     bulk_sample: dict[str, Any] = {
         "name": "Ivars Mucenieks",
@@ -411,11 +504,60 @@ def test_Model_api_bulk(planhat_model):
         "count": 1
     }
 
-    planhat_model._owner.tenant_token = TEST_TENANT_ID
+    planhat_model._owner.tenant_token = TEST_TENANT_TOKEN
     planhat_model.api_bulk(bulk_sample)
 
     planhat_model._owner.client_analytics.update.assert_called_with(
-        f"planhat_model_uri/{TEST_TENANT_ID}",
+        f"planhat_model_uri/{TEST_TENANT_TOKEN}",
         bulk_sample,
         with_post=True,
+    )
+
+
+def test_Model_create_activity(planhat_model):
+    """
+    Test the create activity request to planhat
+    """
+
+    create_sample = json.loads("""\
+    {
+        "email": "ivars@planhat.com",
+        "action": "Logged in",
+        "externalId": "ojpsoi57pzn",
+        "companyExternalId": "Planhat-81ock9l81wl",
+        "weight": 1,
+        "info": {
+            "index": 20,
+            "theme": "Blue"
+        }
+    }
+    """)
+    planhat_model.create_activity(data=create_sample)
+
+    planhat_model._owner.client_analytics.create.assert_called_with(
+        f"planhat_model_uri/{TEST_TENANT_TOKEN}",
+        create_sample
+    )
+
+
+def test_Model_segment(planhat_model):
+    """
+    Test the segment request to planhat
+    """
+
+    create_sample = json.loads("""\
+    {
+        "type": "identify",
+        "traits": {
+            "name": "Ivars Mucenieks",
+            "email": "ivars@planhat.com",
+            "companyId": "ABCDE"
+        }
+    }
+    """)
+    planhat_model.segment(data=create_sample)
+
+    planhat_model._owner.client_analytics.create.assert_called_with(
+        "dock/segment",
+        create_sample
     )
