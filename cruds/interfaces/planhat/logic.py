@@ -104,7 +104,7 @@ def create(self, data: dict) -> dict:
 
 def bulk_upsert(self,
                 data: Dict[Any, Any],
-                step=5000,
+                chunk_size=5000,
                 with_post=False,
                 ) -> List[Dict[str, Union[int, List[str]]]]:
     """
@@ -116,10 +116,10 @@ def bulk_upsert(self,
     following keyables: _id, sourceId and/or externalId.
     """
     self._owner.bulk_upsert_response.clear()
-    operation = self.create if with_post else self.update
+    operation = self._owner.client.create if with_post else self._owner.client.update
 
-    for reference in range(0, len(data), step):
-        next_reference: int = reference + step
+    for reference in range(0, len(data), chunk_size):
+        next_reference: int = reference + chunk_size
         self._owner.bulk_upsert_response.append(operation(self._uri, data[reference:next_reference]))
         logger.info(f"  -> Bulk Records Delivered: {reference} - {next_reference - 1}")
         sleep(self._owner._delay)
@@ -270,7 +270,7 @@ def _get_all_data(self, uri, params, max_requests) -> Generator:
 
 ## User Activity - Analytics Endpoint
 
-def api_bulk(self, data: dict) -> dict:
+def bulk_insert_metrics(self, data: dict) -> dict:
     """
     To push dimension data into Planhat it is required to specify the Tenant Token (tenantUUID) in
     the request URL. This token is a simple uui identifier for your tenant and it can be found in

@@ -95,7 +95,8 @@ def planhat_model():
     class Model:
         __init__ = model_init
         _get_all_data = _get_all_data
-        api_bulk = api_bulk
+        bulk_insert_metrics = bulk_insert_metrics
+        bulk_upsert = bulk_upsert
         create = create
         create_activity = create_activity
         delete = delete
@@ -108,6 +109,7 @@ def planhat_model():
         segment = segment
 
     model = Model(Mock(), "planhat_model_uri")
+    model._owner.bulk_upsert_response = []
     model._owner._delay = 0
     model._owner.tenant_token = TEST_TENANT_TOKEN
 
@@ -237,6 +239,88 @@ def test_Model_create(planhat_model):
     planhat_model._owner.client.create.assert_called_with(
         'planhat_model_uri',
         create_sample
+    )
+
+
+def test_Model_bulk_upsert_with_patch(planhat_model):
+    """
+    Test the bulk upsert can use patch
+    """
+    bulk_upsert_sample = [{"_id": "1"}]
+
+    planhat_model.bulk_upsert(
+        bulk_upsert_sample,
+        with_post=False,
+    )
+    planhat_model._owner.client.update.assert_called()
+
+
+def test_Model_bulk_upsert_with_post(planhat_model):
+    """
+    Test the bulk upsert can use post
+    """
+    bulk_upsert_sample = [{"_id": "1"}]
+
+    planhat_model.bulk_upsert(
+        bulk_upsert_sample,
+        with_post=True,
+    )
+    planhat_model._owner.client.create.assert_called()
+
+
+def test_Model_bulk_upsert_results(planhat_model):
+    """
+    Test the bulk upsert iterates over data and returns results
+    """
+    bulk_upsert_sample = [
+        {"_id": "2"},
+        {"_id": "3"},
+        {"_id": "1"},
+    ]
+
+    def response(self, data):
+        return [d.get("_id", "") for d in data]
+
+    planhat_model._owner.client.update = response
+
+    # Run twice to ensure results are cleared each time
+    planhat_model.bulk_upsert(bulk_upsert_sample)
+    results = planhat_model.bulk_upsert(
+        bulk_upsert_sample,
+        chunk_size=1,
+    )
+
+    expected_results = [["2"], ["3"], ["1"]]
+
+    assert results == expected_results
+    assert planhat_model._owner.bulk_upsert_response == expected_results
+
+
+def test_Model_bulk_upsert_chunksize_two(planhat_model):
+    """
+    Test the bulk upsert iterates with specific chunk sizes
+    """
+
+    bulk_upsert_sample = [
+        {"_id": "1"},
+        {"_id": "2"},
+        {"_id": "3"},
+        {"_id": "4"},
+        {"_id": "5"},
+    ]
+
+    planhat_model.bulk_upsert(
+        bulk_upsert_sample,
+        chunk_size=3,
+    )
+
+    assert planhat_model._owner.client.update.call_count == 2
+    planhat_model._owner.client.update.assert_called_with(
+        "planhat_model_uri",
+        [
+            {"_id": "4"},
+            {"_id": "5"},
+        ]
     )
 
 
@@ -396,7 +480,7 @@ def test_Model_get_dimension_generator_with_company_and_dimension(planhat_model)
 
 def test_Model_get_list_generator(planhat_model):
     """
-    Test the get_dimension_data method creates a generator
+    Test the get dimension data method creates a sub generator off _get_all_data
     """
     planhat_model._get_all_data = MagicMock()
     planhat_model._get_all_data.return_value = iter(EXAMPLE_GET_LIST_DATA)
@@ -419,6 +503,10 @@ def test_Model_get_list_generator(planhat_model):
     )
 
 def test_Model__get_all_data_standard(planhat_model):
+    """
+    Test the get dimension data makes a request with defaults values, in one
+    iteration.
+    """
     planhat_model._owner.client.read.return_value = EXAMPLE_GET_DIMENSION_DATA
 
     uri, params = "get_all_standard_uri", {"limit": 2000, "offset": 0}
@@ -432,6 +520,10 @@ def test_Model__get_all_data_standard(planhat_model):
 
 
 def test_Model__get_all_data_max_requests(planhat_model):
+    """
+    Test the get dimension data makes a request with max requests set to 1,
+    and a limit of 1 value per request.
+    """
     step_size: int = 1
     planhat_model._owner.client.read.side_effect = api_responses(
         EXAMPLE_GET_DIMENSION_DATA, step_size
@@ -448,6 +540,13 @@ def test_Model__get_all_data_max_requests(planhat_model):
 
 
 def test_Model__get_all_data_with_limit_one(planhat_model):
+    """
+    Test the get dimension data makes multiple requests, with a limit of 1 value
+    per request.
+
+    With 3 entries in the example data 4 requests should be made because the
+    drop off from the limit occurs only when the payload returned is empty.
+    """
     step_size: int = 1
     planhat_model._owner.client.read.side_effect = api_responses(
         EXAMPLE_GET_DIMENSION_DATA, step_size
@@ -469,11 +568,17 @@ def test_Model__get_all_data_with_limit_one(planhat_model):
 
 
 def test_Model__get_all_data_with_limit_two(planhat_model):
+    """
+    Test the get dimension data makes multiple requests, with a limit of 2 value
+    per request.
+
+    With 3 entries in the example data 2 requests should be made as the drop off
+    of data from the limit on the second request causes the generator stop.
+    """
     step_size: int = 2
     planhat_model._owner.client.read.side_effect = api_responses(
         EXAMPLE_GET_DIMENSION_DATA, step_size
     )
-
 
     uri, params = "get_all_limit_two_uri", {"limit": step_size, "offset": 0}
     updated_params = deepcopy(params)
@@ -491,9 +596,9 @@ def test_Model__get_all_data_with_limit_two(planhat_model):
 
 ## Analytics Endpoint Tests
 
-def test_Model_api_bulk(planhat_model):
+def test_Model_bulk_insert_metrics(planhat_model):
     """
-    Test the API bulk request to planhat
+    Test the bulk insert metrics request to planhat
     """
     bulk_sample: dict[str, Any] = {
         "name": "Ivars Mucenieks",
@@ -505,7 +610,7 @@ def test_Model_api_bulk(planhat_model):
     }
 
     planhat_model._owner.tenant_token = TEST_TENANT_TOKEN
-    planhat_model.api_bulk(bulk_sample)
+    planhat_model.bulk_insert_metrics(bulk_sample)
 
     planhat_model._owner.client_analytics.update.assert_called_with(
         f"planhat_model_uri/{TEST_TENANT_TOKEN}",

@@ -5,7 +5,7 @@ Tests for the main Interface in CRUDs
 from copy import deepcopy
 import importlib
 from typing import Dict
-from time import sleep
+from unittest.mock import Mock, mock_open, patch
 
 import pytest
 
@@ -96,7 +96,7 @@ def test__create_interface_v1_with_no_package():
     with pytest.raises(TypeError) as excinfo:
         Interface()
 
-    assert "'NoneType' object is not callable" in str(excinfo.value)
+    assert "'NoneType' object is not callable" == str(excinfo.value)
 
 
 def test__create_interface_v1_with_package_and_models(monkeypatch):
@@ -144,4 +144,48 @@ def test__create_interface_v1_with_package_and_models(monkeypatch):
     with pytest.raises(TypeError) as e_info:
         test_instance.test_model.doesnt_exist()
 
-    assert "'NoneType' object is not callable" in repr(e_info)
+    assert "'NoneType' object is not callable" == str(e_info.value)
+
+
+def test_load_config_invalid_version():
+    """
+    Load a configuration file that has no valid version, and ensure it raises
+    """
+    mock_validate = Mock()
+    mock_create_interface_v1 = Mock()
+    mock_create_interface_v1.return_value = iter(["Version1Interface"])
+
+    sample_config = """\
+    version: 0
+    """
+
+    with patch("builtins.open", mock_open()), \
+            patch("builtins.open", mock_open(read_data=sample_config)), \
+            patch("cruds.interface.validate", mock_validate), \
+            pytest.raises(ValueError) as e_info:
+
+        cruds.interface.load_config("test_interface").__next__()
+
+    assert "Configuration has no valid version" == str(e_info.value)
+
+
+def test_load_config_version_1():
+    """
+    Load a configuration file and create the interfaces based on version 1
+    """
+    mock_validate = Mock()
+    mock_create_interface_v1 = Mock()
+    mock_create_interface_v1.return_value = iter(["Version1Interface"])
+
+    sample_config = """\
+    version: 1
+    """
+
+    with patch("builtins.open", mock_open()), \
+            patch("builtins.open", mock_open(read_data=sample_config)), \
+            patch("cruds.interface.validate", mock_validate), \
+            patch("cruds.interface._create_interfaces_v1", mock_create_interface_v1):
+
+        for interface in cruds.interface.load_config("test_interface"):
+            assert interface == "Version1Interface"
+            mock_create_interface_v1.assert_called_once_with({"version": 1})

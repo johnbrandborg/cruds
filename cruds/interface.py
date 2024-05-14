@@ -119,5 +119,8 @@ def load_config(file_name: str):
     validate(instance=config, schema=config_schema)
 
     if config.get("version") == 1:
-        for interface in _create_interfaces_v1(config):
-             yield interface
+        yield from _create_interfaces_v1(config)
+    else:
+        # The validation should catch this situation, but added for consistency
+        # and testing.
+        raise ValueError("Configuration has no valid version")
