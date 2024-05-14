@@ -77,88 +77,8 @@ logging.basicConfig(level=logging.INFO)
 The library has been created with extensibility in mind.  There is two ways that
 this can be done:
 
-1. Interface as Configuration
-2. Subclass the Client and add methods manually
-
-**Interface as Configuration**
-
-CRUDs supports creating interfaces with large amounts of models as configuration.
-This significantly reduces the amount of python coding needed, and the common
-methods can be reused.
-
-Within the CRUDs package preconfigured Interfaces have been created.  They are:
-* Planhat - https://docs.planhat.com/
-
-#### How to use builtin interfaces
-
-Import them from `cruds.interfaces` like so:
-
-```python
-from cruds.interfaces.planhat import Planhat
-
-# For instructions on how to use the interface look at the help information
-help(Planhat)
-```
-
-
-#### How to create and use a custom interfaces
-
-Step 1 - Create the Interface configuration
-
-```yaml
-# catfactninja.yml
-version: 1
-api:
-  - name: CatFactNinja
-    docstring: |
-        New API.  Generated using Interface as Configuration.
-    package: catfactninja
-    models:
-     - name: fact
-       methods:
-        - get_multiple
-       uri: fact
-```
-
-Step 2 - Create the methods as python code that will handle the interface logic
-
-```python
-""" catfactninja.py """
-from cruds import Client
-
-def __init__(self):
-    """
-    This is the Interfaces initialization magic method.
-    """
-    self.client = Client(host="http://catfact.ninja/")
-
-def get_multiple(self, num=1):
-    """
-	Get multiple facts from the model as a generator.
-
-    The owner is the Interface Class. The Model URI is also added automatically
-    as private attributes.
-    """
-
-	while num > 0:
-		yield self._owner.client.read(f"self._uri")
-		num -= 1
-```
-
-Step 3 - Load the configuration and import the interface
-
-```python
-from cruds.interfaces import load_config
-
-load_config("catfactninja.yml")
-from cruds.interfaces import CatFactNinja
-
-catfactninja = CatFactNinja()
-
-# Class Instance now has 'interface.model.logic'
-for fact in catfactninja.fact.get_multiple(3)
-	print(fact)
-```
+1. Subclass the Client and add methods
+2. Interface as Configuration  (More Advanced)
 
 **Subclass Client**
 
@@ -186,9 +106,31 @@ cat = CatFactNinja()
 print(cat.fact)
 ```
 
+**Interface as Configuration**
+
+CRUDs supports creating interfaces with large amounts of models as configuration.
+This significantly reduces the amount of python coding needed, and the common
+methods can be reused.
+
+Within the CRUDs package pre-configured Interfaces have been created.  To use an
+Interface import them from `cruds.interfaces`
+
+Currently available:
+* Planhat - https://docs.planhat.com/
+
+Example:
+```python
+from cruds.interfaces.planhat import Planhat
+
+planhat = Planhat(api_token="9PhAfMO3WllHUmmhJA4eO3tJPhDck1aKLvQ5osvNUfKYdJ7H")
+
+help(planhat)
+```
+
+
 ## To Do List
 - [ ] OAuth Client for Authentication
-- [ ] Interfaces as Configuration
+- [X] Interfaces as Configuration
 
 ## License
 CRUDs is released under the MIT License. See the bundled LICENSE file for details.
