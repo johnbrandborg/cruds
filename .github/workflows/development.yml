@@ -47,6 +47,6 @@ jobs:
           -Dsonar.projectKey=johnbrandborg_cruds
           -Dsonar.python.coverage.reportPaths=coverage.xml
           -Dsonar.python.version=3
-          -Dsonar.sources=cruds/
+          -Dsonar.sources=src/cruds/
           -Dsonar.test.exclusions=tests/**
           -Dsonar.tests=tests/
