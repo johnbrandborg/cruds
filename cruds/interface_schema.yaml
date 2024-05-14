@@ -1,0 +1,74 @@
+type: object
+properties:
+  version:
+    description: Valid schema version that are required to determine how to process
+    type: number
+    enum:
+      - 1
+  api:
+    description: Interfaces configuration to be used for creating the Class
+    type: array
+    items:
+      description: |
+        Configuration for the Interface Class, the name, the docstring, methods
+        and models to be used.
+      type: object
+      properties:
+        name:
+          description: |
+            The name of the Interface Class that will be created.
+          type: string
+        docstring:
+          description: Documentation used on the object in Python.
+          type: string
+        methods:
+          description: |
+            Methods that are applied to the Class itself.  If no list of methods
+            are given, the default is '__init__'.
+          type: array
+          items:
+            type: string
+        default_model_methods:
+          description: |
+            Default model methods are applied to all models, unless the model
+            specifies it's own methods to use instead.
+          type: array
+          items:
+            type: string
+        required_model_methods:
+          description: |
+            Required models are applied even when the model specific it's own
+            and is normally used for static or private methods.
+          type: array
+          items:
+            type: string
+        models:
+          description: |
+            A model that will be created on the Class, with a specific set of
+            model methods to be used and a URI.
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                description: The name of the Model Class that will be created.
+                type: string
+              docstring:
+                description: Documentation used on the object in Python.
+                type: string
+              methods:
+                description: What models to use on the Model Class.  Overrides default_model_methods
+                type: array
+                items:
+                  type: string
+              uri:
+                description: The URI that will be used for CRUD requests.
+                type: string
+            required:
+              - name
+              - uri
+      required:
+        - name
+        - package
+required:
+  - version

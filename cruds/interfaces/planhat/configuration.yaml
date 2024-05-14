@@ -1,0 +1,304 @@
+version: 1
+
+api:
+  - name: Planhat
+    package: cruds.interfaces.planhat.logic
+    docstring: |
+      Handles sending and receiving data using specifically with PlanHat's API.
+
+      planhat = PlanHat(company_id="638dc2b67479f6481b088c50", auth="abc123")
+      print(planhat.asset.get_by_id("extid-21432948"))
+
+      Most methods will use the normal API token for auth, but some will use
+      the tenant token (like 'segment') or no auth token but the tenant token is
+      supplied directly to the method.
+
+      API Documentation: https://docs.planhat.com/#introduction
+
+    methods:
+      - __init__
+      - calls_per_min
+      - bulk_upsert_response_check
+      - tenant_token
+
+    default_model_methods:
+      - create
+      - update
+      - get_by_id
+      - get_list
+      - delete
+      - bulk_upsert
+
+    required_model_methods:
+      - _get_all_data
+
+    models:
+      - name: Asset
+        docstring: |
+          Assets in Planhat can represent many different things depending on your use case. It
+          could be drones, if you're selling a drone tracking product, or it could be instances
+          of your product in cases where a single customer can run multiple instances of your
+          product in parallel.  Assets could also represent your different products.
+
+          More generally, Assets are "nested objects" for which you may want to track usage
+          separately, but don't need to treat them as separate customers with individual contacts,
+          conversations, etc.
+        uri: assets
+
+      - name: Campaign
+        docstring: |
+          Manage campaigns you are running inside companies, e.g., to drive adoption or to deepen
+          stakeholder relations.
+        uri: campaigns
+
+      - name: Churn
+        docstring: |
+          Each time one of your customers churns or downgrades you can add a specific log about
+          this. Mostly this "churn log" is added manually by the CSM from within Planhat, but
+          there may also be times when you want to add it over API, for example if you're
+          capturing information about downgrades and churn natively in-app in your own platform
+          and want to send that over to Planhat.
+
+          The churn logs in Planhat typically contain the reasons for the churn, the value, date
+          etc. It's important to note though that it doesn't affect actual revenue numbers and
+          KPIs such as churn rate, renewal rate etc, on it's own. Those calculations are entirely
+          based on underlying license data.
+        uri: churn
+
+      - name: Company
+        docstring: |
+          Companies ("accounts"), are your customers. Depending on your business these might be
+          agencies, schools, other businesses or something else.  Companies can also be your
+          previous customers and potentially future customers (prospects).
+
+          The company object is one of the most central in Planhat since most other objects relate
+          to it, and it's frequently used to filter out other information, such as endsuers,
+          licenses, notes etc.
+
+          In Planhat it is possible have a hierarchical structure for the companies, meaning that
+          they can be grouped into organizations with parents and children in a tree like
+          structure.
+        methods:
+          - create
+          - update
+          - get_by_id
+          - get_list
+          - get_lean_list
+          - delete
+          - bulk_upsert
+        uri: companies
+
+      - name: Conversation
+        doctring: |
+          Conversations can be of different types such as email, chat, support tickets and
+          manually logged notes. You can also create your own types in Planhat to represent
+          things such as "in person meeting", "Training" etc. The default types (email, chat,
+          ticket, call) are reserved and should not be created over API.
+        uri: conversations
+
+      - name: Custom_Field
+        docstring: |
+          Most objects in Planaht can be customized by creating your own custom fields. Which
+          model a given custom fields belongs is indicated by the parent property.
+
+          Typically you would create the custom fields from within the Planhat app. But in some
+          special cases you may find it more convenient to manage over API instead.
+        methods:
+          - create
+          - update
+          - get_by_id
+          - get_list
+          - delete
+        uri: customfields
+
+      - name: Enduser
+        docstring: |
+          An enduser represents an individual at one of your customers, typically a user of your
+          product, a business contact or both. Endusers can automatically be created based on
+          user tracking events, or based on conversations such as emails and tickets.
+
+          Often this automatic creation of contacts along with sync from an external CRM or
+          similar is enough. But there are also situations where you may want to be 100% sure
+          all your users exist in Planhat, and then it would make sense to create them in Planhat
+          over api as soon as they get created in your own system.
+
+          If companyId is not present in the payload, and the email has a domain already
+          registered within a company, then Planhat will auto-assign the new enduser to the
+          company using domain matching.
+        uri: endusers
+
+      - name: Invoice
+        docstring:
+          Invoices are normally generated automatically in Planhat when a license is created
+          organizations renewed, invoices can include multiple line items. Planhat will not
+          prepare invoices that you actually can send to your customers though. They're rather
+          meant to help anyone working with your customers to know the status of current and past
+          invoicing.
+
+          Invoices default date fields format should be days format integer.
+          (Days since January 1, 1970, Unix epoch)
+        uri: invoices
+
+      - name: Issue
+        docstring: |
+          Issues typically represent Bugs or Feature Requests. Many of our customers fetch issues
+          from Jira, but they can also be pushed to Planhat from other product management tools
+          such as Product Board or Aha! You can also manage issues directly in Planhat without any external tool. Just keep in mind that the functionality is basic and mostly intended to contribute to the customer 360 view.
+
+          Issues in Planhat can link to multiple companies, to multiple endusers and to multiple
+          conversations.
+        uri: issues
+
+      - name: License
+        docstring: |
+          Licenses represent your customers' subcriptions to your service and is the base for MRR
+          (or ARR) calculations and most revenue reports. For non recurring revenue, please see
+          the Sale (NRR) object. There are many ways to get license data into Planhat including
+          incomming webhooks and CRM integrations. In some case though, you just want to handle
+          it yourself over the api, for example if the main source of license data is your own
+          system.
+
+          Licenses in Planhat can be fixed period with a defined start and end date. Or they can
+          be non fixed period (sometimes called open-ended or evergreen). Open ended licenses
+          initially don't have a specified end date since the customer may cancel at any time..
+          once the license is churned/lost also non fixed period licenses can have an end date.
+        uri: licenses
+
+      - name: Note
+        docstring: |
+          Notes in Planhat are technically Conversations. You can create your own custom Touch
+          Types to easily distinguish between different types of notes. You can also use custom
+          fields to add more nuance to your Notes.
+
+          It's quite common for Notes in Planhat to sync with external systems such as Salesforce,
+          Notes can also be created via Zapier or Planhats's native incoming webhooks.
+        uri: conversations
+
+      - name: Metrics
+        docstring: |
+          While User Activity says a lot about user engagement, it doesn't always reflect the
+          value created. Dimension Data is a set of model level metrics (Company by default)
+          to understand how well your customers are doing, and the value they get out of your
+          service.
+
+          Depending on what metrics you pick you might either want to send it as it happens
+          or once a day. Number of user logins for example. You could either send a post
+          everytime a user logs in, or you could save logins at your end and send the total
+          count for the day to planhat once a day. Typically the more granular data you send
+          to planhat, the more options you’ll have to crunch that data later.
+
+          Note: The end point accepts either a single object or an array, which can be useful
+            if you run a batch update with some interval, or if you initially would like to
+            load historical data.
+
+          Note: regardless your location the base URL for User Tracking events is always
+            https://analytics.planhat.com.
+        methods:
+          - epoc_days_format
+          - get_dimension_data
+          - bulk
+        uri: dimensiondata
+
+      - name: NPS
+        docstring: |
+          NPS records in Planhat represent the individual responses to an nps survey. Typically
+          these are created automatically when running an nps campaign in Planhat, or in some
+          cases imported from external NPS tools. A single enduser/contact can have multiple
+          records if they responded to different surveys over time.
+
+          Based on the NPS records each enduser and company in Planhat also get an nps score
+          assigned.
+        uri: nps
+
+      - name: Opportunity
+        docstring: |
+          Opportunities in Planhat represent a sales opportunity, whether it's selling to a new
+          customer or more commonly a chance of expanding an existing account.
+
+          Opportunities are not the sames as Licenses, but when an opportunity is closed won in
+          Planhat, there is an optional setting to generate a licenses based on the opportunity
+          data.
+        uri: opportunities
+
+      - name: Objective
+        docstring: |
+          Being very clear and focused on your goals with customers is critical, and now you can
+          track objectives and the health per objective.
+
+          Pro-tip: use your average Objective health in the Health Score!
+        uri: onjectives
+
+      - name: user_activity
+        methods:
+          - create_activity
+          - segment
+        uri: analytics
+
+      - name: Project
+        docstring: |
+          Projects can represent many different real world objects with a natural start and stop
+          date. A service provider for schools may use Projects to represent classes or courses.
+          If you're selling a software to run sales competitions, then each competition may be a
+          project.
+
+          Using custom fields you can tailor projects to your needs, and just like Assets, usage
+          data and time series data (metrics) can be associated with your Projetcs.
+        uri: projects
+
+      - name: Sale
+        docstring: |
+          The Sale (NRR) model represents not recurring revenue, like an onboarding fee, or a
+          one-off professional services project.
+        uri: sales
+
+      - name: Task
+        docstring: |
+          Tasks are the things that you plan to do in the future. It can be a simple "to-do"
+          without any specific due date, a reminder of something to be done at a specific point
+          in time, or even a meeting with a start and end time.
+
+          Most of the time these tasks will be automatically generated in Planhat based on rules
+          you set up. It's also comon to have tasks as steps in a Playbook. But tasks can also be
+          created ad-hoc just like you would in any task management app.
+
+          Tasks managed over the API should typically have the mainType property set to `task`,
+          the other potential value is `event`, which indicates that it was synced to or from a
+          calendar like Google Calendar. Though it's also possible to create tasks of type event
+          in Planhat without syncing them back to any calendar.
+
+          Once a task is completed it's archived and genrally not visble in Planhat anymore.
+          Sometimes when completing a tasks, say a training session, you want to log a note
+          summarizing how it went, this is managed automatically by Planhat when working in the
+          Planhat app.
+        uri: tasks
+
+      - name: Ticket
+        docstring: |
+          Tickets in Planhat are Conversations, so if you plan to send tickets to Planhat via API
+          then you can also use that endpoint. The ticket endpoint contains a bit of convenience
+          logic for save tickets specificially, like setting the proper type automatically.
+
+          Most of our customers sync tickets from an external system like Zendesk or Salesforce.
+          In case your ticketing system isn't natively supported or you have your own system for
+          it, please let us know and we'll be happy to discuss how to best work with this api.
+        methods:
+          - bulk_upsert
+          - get_list
+          - delete
+        uri: tickets
+
+      - name: User
+        docstring: |
+          Users are all your team members that need access to Planhat. Users can be created in
+          the app, using spreadsheet upload or over api.
+
+          If a user is flagged as inactive, they will not be able to login to Planhat and they
+          will not get notifications, but they will be available for assigning accounts etc.
+        uri: users
+
+      - name: Workspace
+        docstring: |
+          If you work with sub-instances at your customers, e.g., connecting with different
+          departments or with different versions of your product (think like a Workspace in
+          Slack), then this is the object to track that engagement!
+        uri: workspaces
