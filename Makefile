@@ -7,9 +7,14 @@ lint:
 develop:
 	@python -m pip install -e .[develop]
 
+uninstall: clean
+	@pip uninstall -y cruds
+
 clean:
-	@find $(PACKAGES) -type d -name __pycache__ -prune -exec rm -rfv {} \;
-		echo "Clean completed"
+	@python -c "from setuptools import setup; setup()" clean --all;\
+		find $(PACKAGES) -type d -name __pycache__ -prune -exec rm -rfv {} \;;\
+		find $(PACKAGES) -type d -name '*.egg-info' -prune -exec rm -rfv {} \;;\
+		echo "clean completed"
 
 help:
 	@echo "\

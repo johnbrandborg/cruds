@@ -292,7 +292,7 @@ class Client:
             response: urllib3.response.BaseHTTPResponse,
             ) -> Union[Dict[Any, Any], bytes]:
         """
-        Processes the Responce from HTTP Requests in a standardize manner, and
+        Processes the Responce from URLLib3 request in a standardize manner, and
         displays information.
         """
         logger.info(

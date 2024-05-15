@@ -1,10 +1,11 @@
 # CRUDs
+[![PyPI - Version](https://img.shields.io/pypi/v/cruds)](https://pypi.org/project/cruds/)
+[![Supported Python Version](https://img.shields.io/pypi/pyversions/cruds?logo=python&logoColor=FFE873)](https://pypi.org/project/cruds/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/cruds)](https://pypistats.org/packages/cruds)
 [![Development](https://github.com/johnbrandborg/cruds/actions/workflows/development.yml/badge.svg)](https://github.com/johnbrandborg/cruds/actions/workflows/development.yml)
-[![PyPI version](https://badge.fury.io/py/cruds.svg)](https://pypi.org/project/cruds/)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_cruds&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=johnbrandborg_cruds)
 
-CRUDs is a simple high level library for Humans, inspired by [Python Requests](https://requests.readthedocs.io/en/latest/)
-and written using [URLLib3 Team](https://github.com/urllib3).
+CRUDs is a high level library for API's, and is ideal for automation system and/or interactive environments like Notebooks.
 
 ```python
 >>> import cruds
@@ -14,7 +15,7 @@ and written using [URLLib3 Team](https://github.com/urllib3).
 ```
 
 Interact with RESTful APIs using Create, Read, Update and Delete requests quickly,
-easily, and safely.
+easily, and safely, or even create an SDK.
 
 Features:
  * Authentication with a bearer token or username and password
@@ -69,13 +70,14 @@ the CRUDs Client.
 ``` python
 import logging
 import cruds
+
 logging.basicConfig(level=logging.INFO)
 ```
 
-### Extensibility
+### Extensibility and SDK Creation
 
-The library has been created with extensibility in mind.  There is two ways that
-this can be done:
+The library has been created with extensibility in mind, so that Software Development
+Kits can be created.  There is two ways that this can be done:
 
 1. Subclass the Client and add methods
 2. Interface as Configuration  (More Advanced)
