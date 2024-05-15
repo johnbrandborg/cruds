@@ -63,6 +63,21 @@ api = Client(host="https://localhost/api/v1/",
              verify_ssl=False)
 ```
 
+Once the client has been created, CRUD requests can be made by supplying URI's,
+data & params with Dictionaries.
+
+**Example**
+```python
+api.create(uri="user", data={"name": "fred"}, params={"company_id": "1003"})
+id = api.read(uri="user", params={"name": "fred", "select": "id"})
+api.update(uri=f"user/{id}", data={"name": "Fred"})
+api.delete(uri=f"user/{id}")
+```
+
+By default `update` will use a PATCH method which generally indicates only updating
+the set of specific values.  An `update` may also use the PUT method to perform a
+replacement, which can be used by setting `replace` to True.
+
 ### Interfaces
 
 Within CRUDs pre-configured Interfaces have been created.  To use an Interface
