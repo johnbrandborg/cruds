@@ -1,11 +1,13 @@
 # CRUDs
+
 [![PyPI - Version](https://img.shields.io/pypi/v/cruds)](https://pypi.org/project/cruds/)
 [![Supported Python Version](https://img.shields.io/pypi/pyversions/cruds?logo=python&logoColor=FFE873)](https://pypi.org/project/cruds/)
 [![PyPI downloads](https://img.shields.io/pypi/dm/cruds)](https://pypistats.org/packages/cruds)
 [![Development](https://github.com/johnbrandborg/cruds/actions/workflows/development.yml/badge.svg)](https://github.com/johnbrandborg/cruds/actions/workflows/development.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_cruds&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=johnbrandborg_cruds)
 
-CRUDs is a high level library for API's, and is ideal for automation system and/or interactive environments like Notebooks.
+CRUDs is a high level library for API's, and is ideal for automation system and/or
+interactive environments like Notebooks.
 
 ```python
 >>> import cruds
@@ -14,8 +16,8 @@ CRUDs is a high level library for API's, and is ideal for automation system and/
 >>> print(data)
 ```
 
-Interact with RESTful APIs using Create, Read, Update and Delete requests quickly,
-easily, and safely, or even create an SDK.
+Make Create, Read, Update and Delete requests quickly, easily, and safely.  CRUDs
+aims to handle the majority of the general setup so you can focus on moving data.
 
 Features:
  * Authentication with a bearer token or username and password
@@ -36,7 +38,7 @@ To install a stable version use [PyPI](https://pypi.org/project/cruds/).
 pip install cruds
 ```
 
-### Usage
+### General Usage
 
 All features can be adjusted on the Client to suit most needs.
 
@@ -63,6 +65,9 @@ api = Client(host="https://localhost/api/v1/",
 
 ### Logging
 
+Because CRUDs is high level it has verbose logging to assist with capturing
+information around general operations.
+
 If you want to see logging set the level using the standard logging interface.
 DEBUG will show you URLLib3, but INFO will give you general information from
 the CRUDs Client.
@@ -80,7 +85,7 @@ The library has been created with extensibility in mind, so that Software Develo
 Kits can be created.  There is two ways that this can be done:
 
 1. Subclass the Client and add methods
-2. Interface as Configuration  (More Advanced)
+2. Interfaces  (More Advanced)
 
 **Subclass Client**
 
@@ -108,7 +113,7 @@ cat = CatFactNinja()
 print(cat.fact)
 ```
 
-**Interface as Configuration**
+**Interfaces (SDK Creation)**
 
 CRUDs supports creating interfaces with large amounts of models as configuration.
 This significantly reduces the amount of python coding needed, and the common
