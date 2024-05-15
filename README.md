@@ -28,7 +28,7 @@ Features:
  * Retries with back-off
  * SSL Verification
  * Logging for monitoring
- * Interfaces as Configuration
+ * Interfaces (SDK Creation)
 
 ### Installation
 
@@ -63,6 +63,23 @@ api = Client(host="https://localhost/api/v1/",
              verify_ssl=False)
 ```
 
+### Interfaces
+
+Within CRUDs pre-configured Interfaces have been created.  To use an Interface
+import them from interface packages under `cruds.interfaces.<name>`.
+
+Currently available:
+* Planhat - https://docs.planhat.com/
+
+Example:
+```python
+from cruds.interfaces.planhat import Planhat
+
+planhat = Planhat(api_token="9PhAfMO3WllHUmmhJA4eO3tJPhDck1aKLvQ5osvNUfKYdJ7H")
+
+help(planhat)
+```
+
 ### Logging
 
 Because CRUDs is high level it has verbose logging to assist with capturing
@@ -79,17 +96,13 @@ import cruds
 logging.basicConfig(level=logging.INFO)
 ```
 
-### Extensibility and SDK Creation
+### Extensibility
 
 The library has been created with extensibility in mind, so that Software Development
-Kits can be created.  There is two ways that this can be done:
+Kits can be created.  There is two ways that this can be done, one as described below
+or by creating an Interface.
 
-1. Subclass the Client and add methods
-2. Interfaces  (More Advanced)
-
-**Subclass Client**
-
-The approach is to create a new class and add the logic requirements needed to
+The basic approach is to create a new class and add the logic requirements needed to
 make the requests.
 
 ```python
@@ -113,34 +126,19 @@ cat = CatFactNinja()
 print(cat.fact)
 ```
 
-**Interfaces (SDK Creation)**
-
-CRUDs supports creating interfaces with large amounts of models as configuration.
-This significantly reduces the amount of python coding needed, and the common
-methods can be reused.
-
-Within the CRUDs package pre-configured Interfaces have been created.  To use an
-Interface import them from `cruds.interfaces`
-
-Currently available:
-* Planhat - https://docs.planhat.com/
-
-Example:
-```python
-from cruds.interfaces.planhat import Planhat
-
-planhat = Planhat(api_token="9PhAfMO3WllHUmmhJA4eO3tJPhDck1aKLvQ5osvNUfKYdJ7H")
-
-help(planhat)
-```
-
+CRUDs supports creating interfaces with large amounts of models as a mixture of
+YAML configuration and functions for the common logic.  This significantly
+reduces the amount of python coding needed, and the common methods can be reused.
 
 ## To Do List
+
 - [ ] OAuth Client for Authentication
 - [X] Interfaces as Configuration
 
 ## License
+
 CRUDs is released under the MIT License. See the bundled LICENSE file for details.
 
 ## Credits
+
 * [URLLib3 Team](https://github.com/urllib3)
