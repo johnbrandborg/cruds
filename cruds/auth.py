@@ -36,7 +36,7 @@ class OAuth:
 
     @property
     def token(self) -> str:
-        if self._state and self.is_valid:
+        if self.is_valid:
             logging.debug("OAuth Token is still valid")
             return self._state["access_token"]
 
@@ -47,15 +47,13 @@ class OAuth:
         )
         request_headers["Content-Type"] = "application/x-www-form-urlencoded; charset=utf-8"
 
-        token_resp = urllib3.request(
+        jsn = urllib3.request(
             "POST",
             self.server,
             body=f"grant_type=client_credentials&scope={self.scope}",
             headers=request_headers,
             redirect=False,
-        )
-
-        jsn = token_resp.json()
+        ).json()
 
         jsn["expires_on"] = int(time() + jsn["expires_in"])
         self._state = jsn
