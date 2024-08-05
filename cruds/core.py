@@ -2,7 +2,7 @@
 Clients that can be used for easily accessing RESTful APIs
 """
 
-
+from functools import wraps
 import logging
 from json.decoder import JSONDecodeError
 import sys
@@ -13,9 +13,22 @@ from urllib.parse import urlencode
 import certifi
 import urllib3
 
+from .auth import OAuth
+
 logger= logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 300.0
+
+
+def _attr_check(method):
+
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        if hasattr(self, "oauth_client") and not self.oauth_client.is_valid:
+            self._http.headers["Authorization"] = "Bearer " + self.oauth_client.token
+        return method(self, *args, **kwargs)
+
+    return wrapper
 
 
 class Client:
@@ -92,7 +105,7 @@ class Client:
                 (default is True)
         """
         self.host: str = host if host.endswith("/") else host + "/"
-        self.serialize = serialize
+        self.serialize: bool = serialize
         logger.info("API Operation Timeout(sec): %s, Raises Exceptions on status: %s",
                     timeout,
                     raise_status)
@@ -128,11 +141,16 @@ class Client:
             elif isinstance(auth, (list, tuple)) and len(auth) == 2:
                 self._http.headers = urllib3.make_headers(basic_auth=":".join(auth))
                 logger.info("Basic authentication setup")
+            elif isinstance(auth, OAuth):
+                self._http.headers["Authorization"] = "Bearer " + auth.token
+                self.oauth_client: OAuth = auth
+                logger.info("OAuth authentication setup")
             else:
                 logger.info("No authentication setup")
 
         self._http.headers["Content-Type"] = "application/json; charset=utf-8"
 
+    @_attr_check
     def create(self,
                uri: str,
                data: dict,
@@ -161,9 +179,9 @@ class Client:
         -------
         dict if the response is JSON, otherwise bytes
         """
-        url = self.host + uri
-        safe_params = f"?{urlencode(params)}" if params else ""
-        method = "POST"
+        url: str = self.host + uri.lstrip("/")
+        safe_params: str = f"?{urlencode(params)}" if params else ""
+        method: str = "POST"
         logger.info(f"API Create Operation to {url}")
 
         if self.serialize and isinstance(data, dict):
@@ -179,6 +197,7 @@ class Client:
 
         return self._process_resp(method, response)
 
+    @_attr_check
     def read(self,
              uri: str,
              params: Union[Dict[Any, Any], None] = None,
@@ -199,8 +218,8 @@ class Client:
         -------
         dict if the response is JSON, otherwise bytes
         """
-        url = self.host + uri
-        method = "GET"
+        url: str = self.host + uri.lstrip("/")
+        method: str = "GET"
         logger.info(f"API Retrieve Operation to {url}")
 
         response = self._http.request(method,
@@ -209,6 +228,7 @@ class Client:
                                       timeout=self.timeout)
         return self._process_resp(method, response)
 
+    @_attr_check
     def update(self,
                uri: str,
                data: Union[Dict[Any, Any], str],
@@ -240,9 +260,9 @@ class Client:
         -------
         dict if the response is JSON, otherwise bytes
         """
-        url = self.host + uri
-        safe_params = f"?{urlencode(params)}" if params else ""
-        method = "PUT" if replace else "PATCH"
+        url: str = self.host + uri.lstrip("/")
+        safe_params: str = f"?{urlencode(params)}" if params else ""
+        method: str = "PUT" if replace else "PATCH"
         logger.info(f"API Update Operation to {url}")
 
         if self.serialize and isinstance(data, dict):
@@ -258,6 +278,7 @@ class Client:
 
         return self._process_resp(method, response)
 
+    @_attr_check
     def delete(self,
                uri: str,
                params: Union[Dict[Any, Any], None] = None
@@ -276,8 +297,8 @@ class Client:
         -------
         dict if the response is JSON, otherwise bytes
         """
-        url = self.host + uri
-        method = "DELETE"
+        url: str = self.host + uri.lstrip("/")
+        method: str = "DELETE"
         logger.info(f"API Delete Operation to {url}")
 
         response = self._http.request(method,
@@ -309,7 +330,7 @@ class Client:
                 error_type = None
 
             if error_type:
-                msg = f"{error_type} Error with status code {response.status}" \
+                msg: str = f"{error_type} Error with status code {response.status}" \
                       f" Message: {response.data.decode('utf-8')}"
                 raise urllib3.exceptions.HTTPError(msg)
 

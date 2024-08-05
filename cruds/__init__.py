@@ -25,3 +25,4 @@ and written URLLib3.
 """
 
 from .core import Client
+from .auth import OAuth
