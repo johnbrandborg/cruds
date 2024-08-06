@@ -1,85 +1,130 @@
+"""
+Complex authentication flows used to gain access with the CRUDs Client
+"""
+
 import logging
-import random
-import string
 from time import time
+from urllib.parse import urlencode
 
 import urllib3
 
+from .core import Auth
+from .exception import OAuthAccessTokenError
 
 logger= logging.getLogger(__name__)
 
 TOKEN_REFRESH_LEAD_TIME = 30
 
 
-def _state_gen(length=16) -> str:
-    return ''.join(
-        random.choice(
-            string.ascii_uppercase + string.ascii_lowercase + string.digits
-        ) for _ in range(length)
-    )
+class OAuth2(Auth):
+    """
+    A client for the OAuth 2.0 specification, supporting access token using the
+    'Client Credientials' and 'Password' grant type.
+    """
 
-
-class OAuth:
     def __init__(
             self,
             server: str,
             client_id: str,
             client_secret: str,
-            scope: str
+            scope: str,
+            username = None,
+            password = None,
         ) -> None:
+        """
+        Arguments
+        ---------
+        server: str
+            The server name of the OAuth2 platform.
+        client_id: str
+            The ID for the client authentication.
+        client_secret: str
+            The Secret for the client authentication.
+        scope: str
+            The scope required that the token will have access too.
+        username: str (optional)
+            Username used for 'Password' grant type.
+        password: str (optional)
+            Password used for 'Password' grant type.
+        """
         self.server = server
         self.client_id = client_id
         self.client_secret = client_secret
         self.scope = scope
+        self.username = username
+        self.password = password
+        self._state = {}
 
-        self._state = None
-
-    @property
-    def token(self) -> str:
-        if self.is_valid:
+    def access_token(self) -> str:
+        if self.is_valid():
             logging.debug("OAuth Token is still valid")
             return self._state["access_token"]
 
         logging.debug("Retrieving OAuth token")
 
-        request_headers = urllib3.make_headers(
-                basic_auth=f"{self.client_id}:{self.client_secret}"
-        )
+        # Determine if a refresh_token needs to be used.
+        if refresh_token := self._state.get("refresh_token"):
+            logging.debug("Use refresh token to renew access token")
+            fields = {
+                "grant_type": "refresh_token",
+                "refresh_token": refresh_token,
+            }
+            request_headers = urllib3.make_headers()
+        else:
+            fields = {
+                "grant_type": "client_credentials",
+                "scope": self.scope,
+            }
+
+            # Setup Authentication
+            request_headers = urllib3.make_headers(
+                    basic_auth=f"{self.client_id}:{self.client_secret}"
+            )
+
+        # Support Password Grant Type in 2.0
+        if self.username is not None and self.password is not None:
+            fields["grant_type"] = "password"
+            fields["username"] = self.username
+            fields["password"] = self.password
+
         request_headers["Content-Type"] = "application/x-www-form-urlencoded; charset=utf-8"
 
-        jsn = urllib3.request(
+        # Make request to the Server
+        response = urllib3.request(
             "POST",
             self.server,
-            body=f"grant_type=client_credentials&scope={self.scope}",
+            body=urlencode(fields),
             headers=request_headers,
             redirect=False,
-        ).json()
+        )
 
-        jsn["expires_on"] = int(time() + jsn["expires_in"])
-        self._state = jsn
+        # Confirm status is ok to proceed further
+        if 400 <= response.status < 499:
+            msg: str = response.json().get("error_description", "Unknown")
+            raise OAuthAccessTokenError(msg)
 
-        return jsn["access_token"]
+        if not 200 <= response.status < 299:
+            msg: str = f"Error with status code {response.status}" \
+                  f" Message: {response.data.decode('utf-8')}"
+            raise urllib3.exceptions.HTTPError(msg)
 
-    @property
-    def is_valid(self, time_key="expires_on") -> bool:
-        """
-        Check if an OAuth token is valid and hasn't expired yet.
+        access_token = response.json()
+        access_token["created"] = int(time())
+        self._state = access_token
 
-        :param sp_token: dict with properties of OAuth token
-        :param time_key: name of the key that holds the time of expiration
-        :return: true if token is valid, false otherwise
-        """
+        # Check if the token is valid
+        return self._state["access_token"] if self.is_valid() else ""
 
-        if self._state is None:
+    def is_valid(self) -> bool:
+        state: dict = self._state
+
+        if state == {}:
             return False
 
-        if self._state and (
-                "access_token" not in self._state
-                    or self._state.get("token_type", "") != "Bearer"
-                ):
+        if "access_token" not in state or state.get("token_type", "") != "Bearer":
             raise RuntimeError(f"OAuth state is missing critical information")
 
-        if self._state and time_key not in self._state:
-            raise RuntimeError(f"Can't find time key '{time_key}' in OAuth state")
+        if "expires_in" not in state:
+            return True
 
-        return int(self._state[time_key]) > (int(time()) + TOKEN_REFRESH_LEAD_TIME)
+        return int(state["created"] + state["expires_in"]) > (int(time()) + TOKEN_REFRESH_LEAD_TIME)

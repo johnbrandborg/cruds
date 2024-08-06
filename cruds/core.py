@@ -2,7 +2,8 @@
 Clients that can be used for easily accessing RESTful APIs
 """
 
-from functools import wraps
+import abc
+import functools
 import logging
 from json.decoder import JSONDecodeError
 import sys
@@ -13,21 +14,38 @@ from urllib.parse import urlencode
 import certifi
 import urllib3
 
-from .auth import OAuth
-
 logger= logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 300.0
 
 
+class Auth(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def access_token(self) -> str:
+        """
+        Retrives the access token from the server, and performs refreshing
+        the token if supported by the protocol.
+
+        :return: access token as a string
+        """
+        pass
+
+    @abc.abstractmethod
+    def is_valid(self) -> bool:
+        """
+        Check if an access token is valid and hasn't expired yet.
+
+        :return: true if token is valid, otherwise false
+        """
+        pass
+
+
 def _attr_check(method):
-
-    @wraps(method)
+    @functools.wraps(method)
     def wrapper(self, *args, **kwargs):
-        if hasattr(self, "oauth_client") and not self.oauth_client.is_valid:
-            self._http.headers["Authorization"] = "Bearer " + self.oauth_client.token
+        if hasattr(self, "auth") and not self.auth.is_valid():
+            self._http.headers["Authorization"] = "Bearer " + self.auth.access_token()
         return method(self, *args, **kwargs)
-
     return wrapper
 
 
@@ -73,36 +91,35 @@ class Client:
                  verify_ssl=True,
                  ) -> None:
         """
-        Constructs all the necessary attributes for the API object.
-
-        Parameters
-        ----------
-            host: str
-                The host name of the API server connections will be made too.
-            auth: str or tuple, optional
-                A bearer token can be supplied, or a tuple with the username
-                and password.
-            manager: URLLib3 PoolManager, optional
-                You can supply a PoolManager with custom configuration.
-            timeout : float, optional
-                How long to wait before the connection is considered to be
-                taking to long and cancelled.
-            raise_status : bool, optional
-                If a status code of 400-599 is returned in a response will an
-                exception is raised.
-            retries : int, optional
-                How many times to retry connecting to the host.
-            backoff_factor : float, optional
-                How much delay should be added with each retry.
-            retry_status_codes : typle[int], optional
-                Status codes that will trigger retries.
-                (default is (504, 503, 502, 429))
-            serialize : boolaen, optional
-                Serialize and Deserialize dictionaires for data sent and received.
-                (default is True)
-            verify_ssl : boolean, optional
-                Verify the SSL certificate with Certificate Authorities.
-                (default is True)
+        Arguments
+        ---------
+        host: str
+            The host name of the API server connections will be made too.
+        auth: str, tuple, cruds.auth.Auth (optional)
+            A bearer token can be supplied, or a tuple with the username
+            and password. CRUDs includes more complex authentication using
+            the Auth Classes under the `cruds.auth` module.
+        manager: urllib3.PoolManager (optional)
+            You can supply a PoolManager with custom configuration.
+        timeout: float (optional)
+            How long to wait before the connection is considered to be
+            taking to long and cancelled.
+        raise_status: bool (optional)
+            If a status code of 400-599 is returned in a response will an
+            exception is raised.
+        retries: int (optional)
+            How many times to retry connecting to the host.
+        backoff_factor: float (optional)
+            How much delay should be added with each retry.
+        retry_status_codes: typle[int] (optional)
+            Status codes that will trigger retries.
+            (default is (504, 503, 502, 429))
+        serialize: boolaen (optional)
+            Serialize and Deserialize dictionaires for data sent and received.
+            (default is True)
+        verify_ssl: boolean (optional)
+            Verify the SSL certificate with Certificate Authorities.
+            (default is True)
         """
         self.host: str = host if host.endswith("/") else host + "/"
         self.serialize: bool = serialize
@@ -141,10 +158,10 @@ class Client:
             elif isinstance(auth, (list, tuple)) and len(auth) == 2:
                 self._http.headers = urllib3.make_headers(basic_auth=":".join(auth))
                 logger.info("Basic authentication setup")
-            elif isinstance(auth, OAuth):
-                self._http.headers["Authorization"] = "Bearer " + auth.token
-                self.oauth_client: OAuth = auth
-                logger.info("OAuth authentication setup")
+            elif isinstance(auth, Auth):
+                self._http.headers["Authorization"] = "Bearer " + auth.access_token()
+                self.auth: Auth = auth
+                logger.info(f"{auth.__class__.__name__} authentication setup")
             else:
                 logger.info("No authentication setup")
 

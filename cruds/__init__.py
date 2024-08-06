@@ -24,5 +24,5 @@ CRUDs is a simple high level library for Humans, inspired by Python Requests
 and written URLLib3.
 """
 
+from . import auth
 from .core import Client
-from .auth import OAuth
