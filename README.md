@@ -100,9 +100,9 @@ api = Client(
 )
 ```
 
-    The OAuth 2.0 framework will take time to implement and implemented properly.
-    Support in improving this coverage is very welcome. Let the project know of
-    any Issues.
+> The OAuth 2.0 framework will take time to implement and implemented properly.
+> Support in improving this coverage is very welcome. Let the project know of
+> any Issues.
 
 ### Interfaces
 
@@ -170,11 +170,6 @@ print(cat.fact)
 CRUDs supports creating interfaces with large amounts of models as a mixture of
 YAML configuration and functions for the common logic.  This significantly
 reduces the amount of python coding needed, and the common methods can be reused.
-
-## To Do List
-
-- [ ] OAuth2 Client for Authentication
-- [X] Interfaces as Configuration
 
 ## License
 
