@@ -23,8 +23,8 @@ class Auth(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def access_token(self) -> str:
         """
-        Retrives the access token from the server, and performs refreshing
-        the token if supported by the protocol.
+        Retrives the access token from the server, and performs refreshing the
+        token if supported by the protocol.
 
         :return: access token as a string
         """
