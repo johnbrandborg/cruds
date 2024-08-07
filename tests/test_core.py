@@ -7,7 +7,7 @@ import pytest
 import urllib3
 
 import cruds
-from cruds.core import DEFAULT_TIMEOUT
+from cruds.core import Auth, DEFAULT_TIMEOUT
 
 request_headers = {
     "Content-Type": "application/json"
@@ -226,7 +226,6 @@ def test_Client_raise_status_500():
     Check the response status code 500 raises an exception.
     """
     api = cruds.Client(host="https://localhost")
-    api = cruds.Client(host="https://localhost")
     mock_resp = urllib3.HTTPResponse(body=b'{"name": "test"}', status=500)
     with pytest.raises(urllib3.exceptions.HTTPError):
         api._process_resp("", mock_resp)
@@ -236,8 +235,38 @@ def test_Client_raise_status_whitelist():
     """
     Check the response status code 400 doesn't raises an exception when whitelisted.
     """
-    api = cruds.Client(host="https://localhost")
     api = cruds.Client(host="https://localhost", retries=0)
     api.status_whitelist.append(400)
     mock_resp = urllib3.HTTPResponse(body=b'{"name": "test"}', status=400)
     api._process_resp("", mock_resp)
+
+
+def test__check_auth_invalid():
+    """
+    If the auth attribute is found and token is invalid retrieve new token to
+    the request headers.
+    """
+
+    class MockAuth(Auth):
+        def access_token(self):
+            return "9a8sdftg"
+        def is_valid(self):
+            return False
+
+    api = cruds.Client(host="https://localhost", auth=MockAuth())
+    assert api._request_headers.get("Authorization") == "Bearer 9a8sdftg"
+
+
+def test__check_auth_still_valid():
+    """
+    If the auth attribute is found and token is valid do nothing to the request
+    headers.
+    """
+    class MockAuth(Auth):
+        def access_token(self):
+            return "9a8sdftg"
+        def is_valid(self):
+            return True
+
+    api = cruds.Client(host="https://localhost", auth=MockAuth())
+    assert api._request_headers.get("Authorization") == None
