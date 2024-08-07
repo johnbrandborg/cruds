@@ -2,7 +2,7 @@
 Clients that can be used for easily accessing RESTful APIs
 """
 
-
+import abc
 import logging
 from json.decoder import JSONDecodeError
 import sys
@@ -16,6 +16,27 @@ import urllib3
 logger= logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 300.0
+
+
+class Auth(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def access_token(self) -> str:
+        """
+        Retrives the access token from the server, and performs refreshing the
+        token if supported by the protocol.
+
+        :return: access token as a string
+        """
+        pass
+
+    @abc.abstractmethod
+    def is_valid(self) -> bool:
+        """
+        Check if an access token is valid and hasn't expired yet.
+
+        :return: true if token is valid, otherwise false
+        """
+        pass
 
 
 class Client:
@@ -60,39 +81,38 @@ class Client:
                  verify_ssl=True,
                  ) -> None:
         """
-        Constructs all the necessary attributes for the API object.
-
-        Parameters
-        ----------
-            host: str
-                The host name of the API server connections will be made too.
-            auth: str or tuple, optional
-                A bearer token can be supplied, or a tuple with the username
-                and password.
-            manager: URLLib3 PoolManager, optional
-                You can supply a PoolManager with custom configuration.
-            timeout : float, optional
-                How long to wait before the connection is considered to be
-                taking to long and cancelled.
-            raise_status : bool, optional
-                If a status code of 400-599 is returned in a response will an
-                exception is raised.
-            retries : int, optional
-                How many times to retry connecting to the host.
-            backoff_factor : float, optional
-                How much delay should be added with each retry.
-            retry_status_codes : typle[int], optional
-                Status codes that will trigger retries.
-                (default is (504, 503, 502, 429))
-            serialize : boolaen, optional
-                Serialize and Deserialize dictionaires for data sent and received.
-                (default is True)
-            verify_ssl : boolean, optional
-                Verify the SSL certificate with Certificate Authorities.
-                (default is True)
+        Arguments
+        ---------
+        host: str
+            The host name of the API server connections will be made too.
+        auth: str, tuple, cruds.auth.Auth (optional)
+            A bearer token can be supplied, or a tuple with the username
+            and password. CRUDs includes more complex authentication using
+            the Auth Classes under the `cruds.auth` module.
+        manager: urllib3.PoolManager, urllib3.ProxyManager (optional)
+            You can supply a PoolManager with custom configuration.
+        timeout: float (optional)
+            How long to wait before the connection is considered to be
+            taking to long and cancelled.
+        raise_status: bool (optional)
+            If a status code of 400-599 is returned in a response will an
+            exception is raised.
+        retries: int (optional)
+            How many times to retry connecting to the host.
+        backoff_factor: float (optional)
+            How much delay should be added with each retry.
+        retry_status_codes: typle[int] (optional)
+            Status codes that will trigger retries.
+            (default is (504, 503, 502, 429))
+        serialize: boolaen (optional)
+            Serialize and Deserialize dictionaires for data sent and received.
+            (default is True)
+        verify_ssl: boolean (optional)
+            Verify the SSL certificate with Certificate Authorities.
+            (default is True)
         """
         self.host: str = host if host.endswith("/") else host + "/"
-        self.serialize = serialize
+        self.serialize: bool = serialize
         logger.info("API Operation Timeout(sec): %s, Raises Exceptions on status: %s",
                     timeout,
                     raise_status)
@@ -100,10 +120,11 @@ class Client:
         self.raise_status: bool = raise_status
         self.timeout: float = timeout
 
-        if isinstance(manager, urllib3.PoolManager):
-            logger.info("Using supplied HTTP Manager")
+        if isinstance(manager, (urllib3.PoolManager, urllib3.ProxyManager)):
+            logger.info("Using supplied URLLib3 PoolManager or ProxyManager")
             self._http = manager
         else:
+            # Setup Retries
             if retries:
                 logger.info("Retries: %s attempts (backoff factor %s) for status codes %s",
                             retries,
@@ -117,21 +138,30 @@ class Client:
                 logger.info("Retries: Disabled")
                 retry = False
 
+            # Create PoolManager
             self._http = urllib3.PoolManager(
                 cert_reqs="CERT_REQUIRED" if verify_ssl else "CERT_NONE",
                 ca_certs=certifi.where(),
                 retries=retry)
 
-            if isinstance(auth, str):
-                self._http.headers["Authorization"] = f"Bearer {auth}"
-                logger.info("Token authentication setup")
-            elif isinstance(auth, (list, tuple)) and len(auth) == 2:
-                self._http.headers = urllib3.make_headers(basic_auth=":".join(auth))
-                logger.info("Basic authentication setup")
-            else:
-                logger.info("No authentication setup")
+        # Setup Headers (Authentication)
+        self._request_headers = {}
 
-        self._http.headers["Content-Type"] = "application/json; charset=utf-8"
+        if serialize is True:
+            self._request_headers["Content-Type"]  = "application/json"
+
+        if isinstance(auth, str):
+            self._request_headers["Authorization"] = f"Bearer {auth}"
+            logger.info("Token authentication setup")
+        elif isinstance(auth, (list, tuple)) and len(auth) == 2:
+            self._request_headers = urllib3.make_headers(basic_auth=":".join(auth))
+            logger.info("Basic authentication setup")
+        elif isinstance(auth, Auth):
+            self.auth: Auth = auth
+            self._check_auth()
+            logger.info(f"{auth.__class__.__name__} authentication setup")
+        else:
+            logger.info("No authentication setup")
 
     def create(self,
                uri: str,
@@ -161,20 +191,23 @@ class Client:
         -------
         dict if the response is JSON, otherwise bytes
         """
-        url = self.host + uri
-        safe_params = f"?{urlencode(params)}" if params else ""
-        method = "POST"
+        url: str = self.host + uri.lstrip("/")
+        safe_params: str = f"?{urlencode(params)}" if params else ""
+        method: str = "POST"
         logger.info(f"API Create Operation to {url}")
 
+        self._check_auth()
         if self.serialize and isinstance(data, dict):
             response = self._http.request(method,
                                           url + safe_params,
+                                          headers=self._request_headers,
                                           json=data,
                                           timeout=self.timeout)
         else:
             response = self._http.request(method,
                                           url + safe_params,
                                           body=data,
+                                          headers=self._request_headers,
                                           timeout=self.timeout)
 
         return self._process_resp(method, response)
@@ -199,13 +232,15 @@ class Client:
         -------
         dict if the response is JSON, otherwise bytes
         """
-        url = self.host + uri
-        method = "GET"
+        url: str = self.host + uri.lstrip("/")
+        method: str = "GET"
         logger.info(f"API Retrieve Operation to {url}")
 
+        self._check_auth()
         response = self._http.request(method,
                                       url,
                                       fields=params,
+                                      headers=self._request_headers,
                                       timeout=self.timeout)
         return self._process_resp(method, response)
 
@@ -240,20 +275,23 @@ class Client:
         -------
         dict if the response is JSON, otherwise bytes
         """
-        url = self.host + uri
-        safe_params = f"?{urlencode(params)}" if params else ""
-        method = "PUT" if replace else "PATCH"
+        url: str = self.host + uri.lstrip("/")
+        safe_params: str = f"?{urlencode(params)}" if params else ""
+        method: str = "PUT" if replace else "PATCH"
         logger.info(f"API Update Operation to {url}")
 
+        self._check_auth()
         if self.serialize and isinstance(data, dict):
             response = self._http.request(method,
                                           url + safe_params,
+                                          headers=self._request_headers,
                                           json=data,
                                           timeout=self.timeout)
         else:
             response = self._http.request(method,
                                           url + safe_params,
                                           body=data,
+                                          headers=self._request_headers,
                                           timeout=self.timeout)
 
         return self._process_resp(method, response)
@@ -276,13 +314,15 @@ class Client:
         -------
         dict if the response is JSON, otherwise bytes
         """
-        url = self.host + uri
-        method = "DELETE"
+        url: str = self.host + uri.lstrip("/")
+        method: str = "DELETE"
         logger.info(f"API Delete Operation to {url}")
 
+        self._check_auth()
         response = self._http.request(method,
                                       self.host + uri,
                                       fields=params,
+                                      headers=self._request_headers,
                                       timeout=self.timeout)
         return self._process_resp(method, response)
 
@@ -309,7 +349,7 @@ class Client:
                 error_type = None
 
             if error_type:
-                msg = f"{error_type} Error with status code {response.status}" \
+                msg: str = f"{error_type} Error with status code {response.status}" \
                       f" Message: {response.data.decode('utf-8')}"
                 raise urllib3.exceptions.HTTPError(msg)
 
@@ -324,3 +364,7 @@ class Client:
                 return response.data
 
         return response.data
+
+    def _check_auth(self):
+        if hasattr(self, "auth") and not self.auth.is_valid():
+            self._request_headers["Authorization"] = "Bearer " + self.auth.access_token()

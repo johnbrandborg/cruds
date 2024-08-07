@@ -3,12 +3,16 @@ Tests for Core components in CRUDs
 """
 
 from unittest import mock
+
 import pytest
 import urllib3
 
 import cruds
-from cruds.core import DEFAULT_TIMEOUT
+from cruds.core import Auth, DEFAULT_TIMEOUT
 
+request_headers = {
+    "Content-Type": "application/json"
+}
 
 def test_Client_token_authentication():
     """
@@ -16,7 +20,7 @@ def test_Client_token_authentication():
     authenticationi.
     """
     api = cruds.Client(host="https://localhost", auth="api_token")
-    assert api._http.headers.get("Authorization") == "Bearer api_token"
+    assert api._request_headers.get("Authorization") == "Bearer api_token"
 
 
 def test_Client_basic_authentication():
@@ -25,7 +29,7 @@ def test_Client_basic_authentication():
     authentication.
     """
     api = cruds.Client(host="https://localhost", auth=("username", "password"))
-    assert api._http.headers.get("authorization") == "Basic dXNlcm5hbWU6cGFzc3dvcmQ="
+    assert api._request_headers.get("authorization") == "Basic dXNlcm5hbWU6cGFzc3dvcmQ="
 
 
 def test_Client_creates_urllib3_manager():
@@ -72,6 +76,7 @@ def test_Client_create_operation(crud_api):
 
     crud_api._http.request.assert_called_with("POST",
                                               "https://localhost/user/1",
+                                              headers=request_headers,
                                               json=sample,
                                               timeout=DEFAULT_TIMEOUT)
     assert resp.data == b'{"name": "test"}'
@@ -87,6 +92,7 @@ def test_Client_create_operation_with_bytes(crud_api):
     crud_api._http.request.assert_called_with("POST",
                                               "https://localhost/user/2",
                                               body=sample,
+                                              headers=request_headers,
                                               timeout=DEFAULT_TIMEOUT)
     assert resp.data == b'{"name": "test"}'
 
@@ -100,6 +106,7 @@ def test_Client_read_operation(crud_api):
     crud_api._http.request.assert_called_with("GET",
                                               "https://localhost/test",
                                               fields=None,
+                                              headers=request_headers,
                                               timeout=DEFAULT_TIMEOUT)
     assert resp.data == b'{"name": "test"}'
 
@@ -113,6 +120,7 @@ def test_Client_update_operation(crud_api):
 
     crud_api._http.request.assert_called_with("PATCH",
                                               "https://localhost/test",
+                                              headers=request_headers,
                                               json=sample,
                                               timeout=DEFAULT_TIMEOUT)
     assert resp.data == b'{"name": "test"}'
@@ -128,6 +136,7 @@ def test_Client_update_operation_with_bytes(crud_api):
     crud_api._http.request.assert_called_with("PATCH",
                                               "https://localhost/test",
                                               body=sample,
+                                              headers=request_headers,
                                               timeout=DEFAULT_TIMEOUT)
     assert resp.data == b'{"name": "test"}'
 
@@ -141,6 +150,7 @@ def test_Client_update_operation_with_replace(crud_api):
 
     crud_api._http.request.assert_called_with("PUT",
                                               "https://localhost/test",
+                                              headers=request_headers,
                                               json=sample,
                                               timeout=DEFAULT_TIMEOUT)
     assert resp.data == b'{"name": "test"}'
@@ -155,6 +165,7 @@ def test_Client_delete_operation(crud_api):
     crud_api._http.request.assert_called_with("DELETE",
                                               "https://localhost/test",
                                               fields=None,
+                                              headers=request_headers,
                                               timeout=DEFAULT_TIMEOUT)
     assert resp.data == b'{"name": "test"}'
 
@@ -216,7 +227,6 @@ def test_Client_raise_status_500():
     Check the response status code 500 raises an exception.
     """
     api = cruds.Client(host="https://localhost")
-    api = cruds.Client(host="https://localhost")
     mock_resp = urllib3.HTTPResponse(body=b'{"name": "test"}', status=500)
     with pytest.raises(urllib3.exceptions.HTTPError):
         api._process_resp("", mock_resp)
@@ -226,8 +236,38 @@ def test_Client_raise_status_whitelist():
     """
     Check the response status code 400 doesn't raises an exception when whitelisted.
     """
-    api = cruds.Client(host="https://localhost")
     api = cruds.Client(host="https://localhost", retries=0)
     api.status_whitelist.append(400)
     mock_resp = urllib3.HTTPResponse(body=b'{"name": "test"}', status=400)
     api._process_resp("", mock_resp)
+
+
+def test__check_auth_invalid():
+    """
+    If the auth attribute is found and token is invalid retrieve new token to
+    the request headers.
+    """
+
+    class MockAuth(Auth):
+        def access_token(self):
+            return "9a8sdftg"
+        def is_valid(self):
+            return False
+
+    api = cruds.Client(host="https://localhost", auth=MockAuth())
+    assert api._request_headers.get("Authorization") == "Bearer 9a8sdftg"
+
+
+def test__check_auth_still_valid():
+    """
+    If the auth attribute is found and token is valid do nothing to the request
+    headers.
+    """
+    class MockAuth(Auth):
+        def access_token(self):
+            return "9a8sdftg"
+        def is_valid(self):
+            return True
+
+    api = cruds.Client(host="https://localhost", auth=MockAuth())
+    assert api._request_headers.get("Authorization") == None
