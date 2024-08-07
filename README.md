@@ -93,7 +93,7 @@ from cruds.auth import OAuth2
 api = Client(
     host="https://localhost/api/v1/",
     auth=OAuth2(
-        server="https://localhost/token",
+        url="https://localhost/token",
         client_id="id",
         client_secret="secret",
         scope="api",
