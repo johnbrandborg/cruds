@@ -3,7 +3,6 @@ Clients that can be used for easily accessing RESTful APIs
 """
 
 import abc
-import functools
 import logging
 from json.decoder import JSONDecodeError
 import sys
@@ -38,15 +37,6 @@ class Auth(metaclass=abc.ABCMeta):
         :return: true if token is valid, otherwise false
         """
         pass
-
-
-def _attr_check(method):
-    @functools.wraps(method)
-    def wrapper(self, *args, **kwargs):
-        if hasattr(self, "auth") and not self.auth.is_valid():
-            self._http.headers["Authorization"] = "Bearer " + self.auth.access_token()
-        return method(self, *args, **kwargs)
-    return wrapper
 
 
 class Client:
@@ -99,7 +89,7 @@ class Client:
             A bearer token can be supplied, or a tuple with the username
             and password. CRUDs includes more complex authentication using
             the Auth Classes under the `cruds.auth` module.
-        manager: urllib3.PoolManager (optional)
+        manager: urllib3.PoolManager, urllib3.ProxyManager (optional)
             You can supply a PoolManager with custom configuration.
         timeout: float (optional)
             How long to wait before the connection is considered to be
@@ -130,10 +120,11 @@ class Client:
         self.raise_status: bool = raise_status
         self.timeout: float = timeout
 
-        if isinstance(manager, urllib3.PoolManager):
-            logger.info("Using supplied HTTP Manager")
+        if isinstance(manager, (urllib3.PoolManager, urllib3.ProxyManager)):
+            logger.info("Using supplied URLLib3 PoolManager or ProxyManager")
             self._http = manager
         else:
+            # Setup Retries
             if retries:
                 logger.info("Retries: %s attempts (backoff factor %s) for status codes %s",
                             retries,
@@ -147,27 +138,31 @@ class Client:
                 logger.info("Retries: Disabled")
                 retry = False
 
+            # Create PoolManager
             self._http = urllib3.PoolManager(
                 cert_reqs="CERT_REQUIRED" if verify_ssl else "CERT_NONE",
                 ca_certs=certifi.where(),
                 retries=retry)
 
-            if isinstance(auth, str):
-                self._http.headers["Authorization"] = f"Bearer {auth}"
-                logger.info("Token authentication setup")
-            elif isinstance(auth, (list, tuple)) and len(auth) == 2:
-                self._http.headers = urllib3.make_headers(basic_auth=":".join(auth))
-                logger.info("Basic authentication setup")
-            elif isinstance(auth, Auth):
-                self._http.headers["Authorization"] = "Bearer " + auth.access_token()
-                self.auth: Auth = auth
-                logger.info(f"{auth.__class__.__name__} authentication setup")
-            else:
-                logger.info("No authentication setup")
+        # Setup Headers (Authentication)
+        self._request_headers = {}
 
-        self._http.headers["Content-Type"] = "application/json; charset=utf-8"
+        if serialize is True:
+            self._request_headers["Content-Type"]  = "application/json"
 
-    @_attr_check
+        if isinstance(auth, str):
+            self._request_headers["Authorization"] = f"Bearer {auth}"
+            logger.info("Token authentication setup")
+        elif isinstance(auth, (list, tuple)) and len(auth) == 2:
+            self._request_headers = urllib3.make_headers(basic_auth=":".join(auth))
+            logger.info("Basic authentication setup")
+        elif isinstance(auth, Auth):
+            self.auth: Auth = auth
+            self._check_auth()
+            logger.info(f"{auth.__class__.__name__} authentication setup")
+        else:
+            logger.info("No authentication setup")
+
     def create(self,
                uri: str,
                data: dict,
@@ -201,20 +196,22 @@ class Client:
         method: str = "POST"
         logger.info(f"API Create Operation to {url}")
 
+        self._check_auth()
         if self.serialize and isinstance(data, dict):
             response = self._http.request(method,
                                           url + safe_params,
+                                          headers=self._request_headers,
                                           json=data,
                                           timeout=self.timeout)
         else:
             response = self._http.request(method,
                                           url + safe_params,
                                           body=data,
+                                          headers=self._request_headers,
                                           timeout=self.timeout)
 
         return self._process_resp(method, response)
 
-    @_attr_check
     def read(self,
              uri: str,
              params: Union[Dict[Any, Any], None] = None,
@@ -239,13 +236,14 @@ class Client:
         method: str = "GET"
         logger.info(f"API Retrieve Operation to {url}")
 
+        self._check_auth()
         response = self._http.request(method,
                                       url,
                                       fields=params,
+                                      headers=self._request_headers,
                                       timeout=self.timeout)
         return self._process_resp(method, response)
 
-    @_attr_check
     def update(self,
                uri: str,
                data: Union[Dict[Any, Any], str],
@@ -282,20 +280,22 @@ class Client:
         method: str = "PUT" if replace else "PATCH"
         logger.info(f"API Update Operation to {url}")
 
+        self._check_auth()
         if self.serialize and isinstance(data, dict):
             response = self._http.request(method,
                                           url + safe_params,
+                                          headers=self._request_headers,
                                           json=data,
                                           timeout=self.timeout)
         else:
             response = self._http.request(method,
                                           url + safe_params,
                                           body=data,
+                                          headers=self._request_headers,
                                           timeout=self.timeout)
 
         return self._process_resp(method, response)
 
-    @_attr_check
     def delete(self,
                uri: str,
                params: Union[Dict[Any, Any], None] = None
@@ -318,9 +318,11 @@ class Client:
         method: str = "DELETE"
         logger.info(f"API Delete Operation to {url}")
 
+        self._check_auth()
         response = self._http.request(method,
                                       self.host + uri,
                                       fields=params,
+                                      headers=self._request_headers,
                                       timeout=self.timeout)
         return self._process_resp(method, response)
 
@@ -362,3 +364,7 @@ class Client:
                 return response.data
 
         return response.data
+
+    def _check_auth(self):
+        if hasattr(self, "auth") and not self.auth.is_valid():
+            self._request_headers["Authorization"] = "Bearer " + self.auth.access_token()

@@ -123,7 +123,7 @@ def test_Planhat_init(planhat):
     EXCEPTED_AUTH_HEADER = "Bearer 9PhAfMO3WllHUmmhJA4eO3tJPhDck1aKLvQ5osvNUfKYdJ7H"
 
     assert isinstance(planhat.client, Client)
-    assert planhat.client._http.headers["Authorization"] == EXCEPTED_AUTH_HEADER
+    assert planhat.client._request_headers["Authorization"] == EXCEPTED_AUTH_HEADER
 
     assert planhat._delay == 0.3
     assert planhat.calls_per_min == 200

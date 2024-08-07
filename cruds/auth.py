@@ -24,7 +24,7 @@ class OAuth2(Auth):
 
     def __init__(
             self,
-            server: str,
+            url: str,
             client_id: str,
             client_secret: str,
             scope: str,
@@ -34,8 +34,8 @@ class OAuth2(Auth):
         """
         Arguments
         ---------
-        server: str
-            The server name of the OAuth2 platform.
+        url: str
+            The url name of the OAuth2 platform.
         client_id: str
             The ID for the client authentication.
         client_secret: str
@@ -47,7 +47,7 @@ class OAuth2(Auth):
         password: str (optional)
             Password used for 'Password' grant type.
         """
-        self.server = server
+        self.url = url
         self.client_id = client_id
         self.client_secret = client_secret
         self.scope = scope
@@ -92,7 +92,7 @@ class OAuth2(Auth):
         # Make request to the Server
         response = urllib3.request(
             "POST",
-            self.server,
+            self.url,
             body=urlencode(fields),
             headers=request_headers,
             redirect=False,
