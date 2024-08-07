@@ -122,7 +122,7 @@ class OAuth2(Auth):
             return False
 
         if "access_token" not in state or state.get("token_type", "") != "Bearer":
-            raise RuntimeError(f"OAuth state is missing critical information")
+            raise RuntimeError("Auth state is missing critical information")
 
         if "expires_in" not in state:
             return True
