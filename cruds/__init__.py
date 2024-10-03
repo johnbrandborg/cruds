@@ -26,3 +26,5 @@ and written URLLib3.
 
 from . import auth
 from .core import Client
+
+__version__: str = "1.3.0"

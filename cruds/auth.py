@@ -2,6 +2,7 @@
 Complex authentication flows used to gain access with the CRUDs Client
 """
 
+import json
 import logging
 from time import time
 from urllib.parse import urlencode
@@ -28,6 +29,7 @@ class OAuth2(Auth):
             client_id: str,
             client_secret: str,
             scope: str,
+            authorization_details = None,
             username = None,
             password = None,
         ) -> None:
@@ -42,6 +44,8 @@ class OAuth2(Auth):
             The Secret for the client authentication.
         scope: str
             The scope required that the token will have access too.
+        authorization_details: list(dict)
+            Fine-grained parameters for Rich Authorization Request (RAR)
         username: str (optional)
             Username used for 'Password' grant type.
         password: str (optional)
@@ -51,6 +55,7 @@ class OAuth2(Auth):
         self.client_id = client_id
         self.client_secret = client_secret
         self.scope = scope
+        self.authorization_details = authorization_details
         self.username = username
         self.password = password
         self._state = {}
@@ -86,6 +91,12 @@ class OAuth2(Auth):
             fields["grant_type"] = "password"
             fields["username"] = self.username
             fields["password"] = self.password
+
+        # Rich Authorization Request (RAR)
+        if self.authorization_details is not None and isinstance(self.authorization_details, list):
+            fields['authorization_details'] = json.dumps(self.authorization_details)
+        elif self.authorization_details is not None:
+            fields['authorization_details'] = self.authorization_details
 
         request_headers["Content-Type"] = "application/x-www-form-urlencoded; charset=utf-8"
 
