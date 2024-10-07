@@ -17,7 +17,7 @@ Release v\ |version|.
     :alt: PyPI downloads
 
 .. image:: https://img.shields.io/pypi/l/cruds.svg
-    :target: https://pypi.org/project/cruds/
+    :target: https://github.com/johnbrandborg/cruds/blob/main/LICENSE
     :alt: License Badge
 
 **CRUDs** is a high level library for API's, and is ideal for automated data processing
@@ -58,6 +58,8 @@ and examples of way to use it to move data.
    :maxdepth: 2
 
    user_guide
+   authentication
+   interfaces
    changelog
    license
 

@@ -27,4 +27,5 @@ and written URLLib3.
 from . import auth
 from .core import Client
 
+__author__: str = "John Brandborg"
 __version__: str = "1.3.0"

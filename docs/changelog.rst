@@ -1,7 +1,7 @@
 Changelog
 =========
 
-Release 1.3.0 (October 4, 2024)
+Release 1.3.0 (October 7, 2024)
 -------------------------------
 
 Features:

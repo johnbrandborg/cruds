@@ -4,6 +4,7 @@
 [![Supported Python Version](https://img.shields.io/pypi/pyversions/cruds?logo=python&logoColor=FFE873)](https://pypi.org/project/cruds/)
 [![Development](https://github.com/johnbrandborg/cruds/actions/workflows/development.yml/badge.svg)](https://github.com/johnbrandborg/cruds/actions/workflows/development.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_cruds&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=johnbrandborg_cruds)
+[![Documentation Status](https://readthedocs.org/projects/cruds/badge/?version=latest)](https://cruds.readthedocs.io/en/latest/?badge=latest)
 
 CRUDs is a high level library for API's, and is ideal for automated data processing
 and interactive environments like Notebooks.
@@ -17,6 +18,10 @@ and interactive environments like Notebooks.
 >>> type(date)
 <class 'dict'>
 ```
+
+Make Create, Read, Update and Delete operations quickly, easily, and safely. CRUDs
+aims to handle the majority of the setup needed for production so you can focus
+on moving data.
 
 Features:
  * Authentication with a bearer token, username & password, or OAuth2 (Beta)
