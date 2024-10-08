@@ -7,11 +7,20 @@ apidocs:  # Creates API documentation for RTDs
 test:  # Perform unit testing on the source code
 	@python -m pytest
 
-lint:  # Perform quality checks on the source code
-	@python -m flake8 --select=E9,F63,F7,F82 --show-source
+test-report:  # Perform unit testing on the source code with a coverage report
+	@python -m pytest --cov-report=xml
 
-develop:  # Installs all requirements and testing requirements
+lint:  # Perform quality checks on the source code
+	# stop the build if there are Python syntax errors or undefined names
+	@python -m flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+	# exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+	@python -m flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+develop:  update-pip  # Installs all requirements and testing requirements
 	@python -m pip install -e '.[develop]'
+
+update-pip:  # Updates the version of pip
+	@python -m pip install --upgrade pip
 
 uninstall: clean
 	@pip uninstall -y cruds
