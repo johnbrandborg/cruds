@@ -2,7 +2,6 @@ Authentication
 ==============
 
 
-
 OAuth2 Workflows
 ----------------
 
@@ -21,7 +20,7 @@ is taken care of automatically.
     >>> api = Client(
     ...     host="https://localhost/api/v1/",
     ...     auth=OAuth2(
-    ...         url="https://localhost/token",
+                url="https://localhost/token",
     ...         client_id="id",
     ...         client_secret="secret",
     ...         scope="api",

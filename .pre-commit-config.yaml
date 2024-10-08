@@ -1,0 +1,26 @@
+fail_fast: true
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0  # this is optional, use `pre-commit autoupdate` to get the latest rev!
+    hooks:
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: name-tests-test
+        args: [--pytest-test-first]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff-format
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        types_or: [python, pyi]
+        require_serial: true
+
+  - repo: https://github.com/sphinx-contrib/sphinx-lint
+    rev: v1.0.0
+    hooks:
+      - id: sphinx-lint

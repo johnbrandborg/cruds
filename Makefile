@@ -5,7 +5,8 @@ apidocs:  # Creates API documentation for RTDs
 	@sphinx-apidoc -f -o docs cruds/
 
 develop:  update-pip  # Installs all requirements and testing requirements
-	@python -m pip install -e '.[develop]'
+	@python -m pip install -e '.[develop]' \
+		&& pre-commit install
 
 test:  # Perform unit testing on the source code
 	@python -m pytest
