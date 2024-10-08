@@ -30,7 +30,7 @@ and interactive environments like Notebooks.
     >>> catfact_ninja = cruds.Client(host="https://catfact.ninja/")
     >>>
     >>> data = catfact_ninja.read("fact")
-    >>> type(data)
+    >>> type(data)  # Python built-in data types you can use straight away!
     <class 'dict'>
 
 Make Create, Read, Update and Delete operations quickly, easily, and safely. CRUDs
@@ -38,11 +38,11 @@ aims to handle the majority of the setup needed for production so you can focus
 on moving data.
 
 Features:
- - Authentication with a bearer token, username & password, or OAuth2 (Beta)
- - Data serialization/deserialize (Only JSON format)
+ - Authentication with a bearer token, username & password, or OAuth2
+ - Data serialization/de-serialization (Currently only JSON format)
  - Request parameters as Dictionaries and automatically URL encoded
- - Default connection timeout (300 seconds)
- - Raises exceptions on bad status codes (Can be white listed)
+ - Default connection timeout (5 minutes)
+ - Raises exceptions on bad status codes (Can be whitelisted)
  - Retries with back-off
  - SSL Verification
  - Logging for monitoring
@@ -61,6 +61,7 @@ and examples of way to use it to move data.
    authentication
    interfaces
    changelog
+   development
    license
 
 API Documentation

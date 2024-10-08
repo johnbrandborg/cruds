@@ -23,7 +23,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
-      run: make install
+      run: make develop
     - name: Code Linting
       run: make lint
     - name: Code Testing

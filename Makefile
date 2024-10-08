@@ -4,7 +4,7 @@ help:  # Displays the help menu with all the targets
 apidocs:  # Creates API documentation for RTDs
 	@sphinx-apidoc -f -o docs cruds/
 
-install:  update-pip  # Installs all requirements and testing requirements
+develop:  update-pip  # Installs all requirements and testing requirements
 	@python -m pip install -e '.[develop]'
 
 test:  # Perform unit testing on the source code
@@ -32,4 +32,4 @@ clean:  # Removes built Python Packages and cached byte code
 		echo "clean completed"
 
 .DEFAULT_GOAL := help
-.PHONY: help apidocs install test test-report lint format update-pip uninstall clean
+.PHONY: help apidocs develop test test-report lint format update-pip uninstall clean

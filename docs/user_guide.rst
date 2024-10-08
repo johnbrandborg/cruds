@@ -4,35 +4,34 @@ Installation
 This part of the documentation covers the installation of CRUDs.
 The first step to using any software package is getting it properly installed.
 
+$ pip install cruds
+-------------------
 
-$ python -m pip install cruds
---------------------------------
-
-To install CRUDs, simply run this simple command in your terminal of choice::
+To install a stable version of CRUDs, use pip by running the following command::
 
     $ python -m pip install cruds
 
-Get the Source Code
--------------------
+If you have installed Python, then pip should be available.  If not visit
+`getting-started <https://pip.pypa.io/en/stable/getting-started/>`_ with pip.
 
-CRUDs is actively developed on GitHub, where the code is
-`always available <https://github.com/johnbrandborg/cruds>`_.
+Source Code
+-----------
 
-You can clone the public repository::
+If you would like to install an latest unreleased source code you can clone it from
+`Github <https://github.com/johnbrandborg/cruds>`_.
+
+Using a git client you can clone the repository and install it with pip::
 
     $ git clone https://github.com/johnbrandborg/cruds.git
+    $ python -m pip install ./cruds
 
-Once you have a copy of the source, you can embed it in your own Python
-package, or install it into your site-packages easily::
-
-    $ cd cruds
-    $ python -m pip install -e '.[develop]'
+For developers wanting to contribute, please visit the :ref:`development` section.
 
 General Usage
 =============
 
 Unlike other HTTP packages that you have handle the full URL and methods, with
-CRUDs the object you create is a respentation of an API.  You can then interact
+CRUDs the object you create is a representation of an API.  You can then interact
 with the API using CRUD operations.
 
 All features can be adjusted on the Client to suit most needs.
