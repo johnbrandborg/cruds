@@ -29,3 +29,5 @@ from .core import Client
 
 __author__: str = "John Brandborg"
 __version__: str = "1.3.0"
+
+__all__: list = ["Client", "auth"]
