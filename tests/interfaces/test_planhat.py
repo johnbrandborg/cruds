@@ -5,7 +5,6 @@ Tests for Planhat interface logic in CRUDs
 from collections.abc import Generator
 from copy import deepcopy
 import json
-from re import I
 from unittest.mock import MagicMock, Mock
 
 import pytest
@@ -371,7 +370,7 @@ def test_Model_get_lean_list(planhat_model):
     planhat_model.get_lean_list()
 
     planhat_model._owner.client.read.assert_called_with(
-        f"leancompanies",
+        "leancompanies",
         params={},
     )
 
@@ -384,7 +383,7 @@ def test_Model_get_lean_list_externl_id(planhat_model):
     planhat_model.get_lean_list(external_id="chevron")
 
     planhat_model._owner.client.read.assert_called_with(
-        f"leancompanies",
+        "leancompanies",
         params={"externalId": "chevron"},
     )
 
@@ -396,7 +395,7 @@ def test_Model_get_lean_list_source_id(planhat_model):
     planhat_model.get_lean_list(source_id="0012000001UchdsAAB")
 
     planhat_model._owner.client.read.assert_called_with(
-        f"leancompanies",
+        "leancompanies",
         params={"sourceId": "0012000001UchdsAAB"},
     )
 
@@ -407,7 +406,7 @@ def test_Model_get_lean_list_status_list(planhat_model):
     """
     planhat_model.get_lean_list(status=["lost", "prospect"])
     planhat_model._owner.client.read.assert_called_with(
-        f"leancompanies",
+        "leancompanies",
         params={"status": ["lost", "prospect"]},
     )
 
@@ -418,7 +417,7 @@ def test_Model_get_lean_list_status_string(planhat_model):
     """
     planhat_model.get_lean_list(status="lost, prospect")
     planhat_model._owner.client.read.assert_called_with(
-        f"leancompanies",
+        "leancompanies",
         params={"status": ["lost", "prospect"]},
     )
 

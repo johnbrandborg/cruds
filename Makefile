@@ -4,20 +4,20 @@ help:  # Displays the help menu with all the targets
 apidocs:  # Creates API documentation for RTDs
 	@sphinx-apidoc -f -o docs cruds/
 
+install:  update-pip  # Installs all requirements and testing requirements
+	@python -m pip install -e '.[develop]'
+
 test:  # Perform unit testing on the source code
 	@python -m pytest
 
 test-report:  # Perform unit testing on the source code with a coverage report
 	@python -m pytest --cov-report=xml
 
-lint:  # Perform quality checks on the source code
-	# stop the build if there are Python syntax errors or undefined names
-	@python -m flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-	# exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-	@python -m flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+lint:  # Quality checks on the source code (Doesn't change code)
+	@python -m ruff check --diff src/
 
-develop:  update-pip  # Installs all requirements and testing requirements
-	@python -m pip install -e '.[develop]'
+format:  # Check the format of source code  (Doesn't change code)
+	@python -m ruff format --diff src/
 
 update-pip:  # Updates the version of pip
 	@python -m pip install --upgrade pip
@@ -32,4 +32,4 @@ clean:  # Removes built Python Packages and cached byte code
 		echo "clean completed"
 
 .DEFAULT_GOAL := help
-.PHONY: docs test lint develop clean help
+.PHONY: help apidocs install test test-report lint format update-pip uninstall clean
