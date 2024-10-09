@@ -20,7 +20,7 @@ Source Code
 If you would like to install an latest unreleased source code you can clone it from
 `Github <https://github.com/johnbrandborg/cruds>`_.
 
-Using a git client you can clone the repository and install it with pip::
+Using a git client you can clone the repository and install it with pip like so::
 
     $ git clone https://github.com/johnbrandborg/cruds.git
     $ python -m pip install ./cruds
@@ -36,16 +36,6 @@ with the API using CRUD operations.
 
 All features can be adjusted on the Client to suit most needs.
 
-    >>> from cruds import Client
-    >>>
-    >>> # Authentication with Username and Password
-    >>> api = Client(host="https://localhost/api/v1/",
-    ...          auth=("username", "password"))
-    >>>
-    >>> # Authentication with Token
-    >>> api = Client(host="https://localhost/api/v1/",
-    ...          auth="bearer-token")
-    >>>
     >>> # Send and receive raw data and ignore bad status codes
     >>> api = Client(host="https://localhost/api/v1/",
     ...          serialize=False,
@@ -73,6 +63,24 @@ data & params with Dictionaries.
 By default `update` will use a PATCH method which generally indicates only updating
 the set of specific values.  An `update` may also use the PUT method to perform a
 replacement, which can be used by setting `replace` to True.
+
+Method Relationship
+-------------------
+
+To make it easier to understand how to use CRUD operations, here is a breakdown
+of the relevant web method requests using the Client Class methods. While they
+are closely related, there is a minor difference to be aware of.
+
+    >>> Client.create()             # -> POST request
+    >>> Client.read()               # -> GET request
+    >>> Client.update()             # -> PATCH request
+    >>> Client.update(replace=True) # -> PUT request
+    >>> Client.delete()             # -> DELETE request
+
+While most clients require you to handle web response objects and deal with
+issues, retries, and data extraction, our CRUD Client methods simplify the process
+by only returning the necessary data. In the event of a request issue, an error
+will be raised, ensuring a more efficient and streamlined experience.
 
 Logging
 -------

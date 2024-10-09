@@ -20,8 +20,8 @@ Release v\ |version|.
     :target: https://github.com/johnbrandborg/cruds/blob/main/LICENSE
     :alt: License Badge
 
-**CRUDs** is a high level library for API's, and is ideal for automated data processing
-and interactive environments like Notebooks.
+**CRUDs** is a high level client library for API's, and is ideal for back-end
+communication, automated data processing and interactive environments like Notebooks.
 
 --------------------
 
@@ -30,7 +30,7 @@ and interactive environments like Notebooks.
     >>> catfact_ninja = cruds.Client(host="https://catfact.ninja/")
     >>>
     >>> data = catfact_ninja.read("fact")
-    >>> type(data)  # Python built-in data types you can use straight away!
+    >>> type(data)  # Python built-in data types you can use instantly!
     <class 'dict'>
 
 Make Create, Read, Update and Delete operations quickly, easily, and safely. CRUDs
@@ -47,6 +47,25 @@ Features:
  - SSL Verification
  - Logging for monitoring
  - Interfaces (SDK Creation)
+
+Purpose
+-------
+
+The purpose of this package is to simplify the process of interacting with APIs that implement CRUD (Create, Read, Update, Delete) operations.
+By using this package, developers can focus more on working with data rather than understanding complex web protocols.
+
+What CRUDs is not::
+ - A low-level client library that requires extensive coding for common requirements and production readiness.
+ - A high-level client library designed for accessing websites and front-ends, which may contain unnecessary functionality for API usage. (Additional packages may still be required for common functionality)
+ - A client library that should be used for API's that do not follow CRUD operation designs.
+
+What CRUDs is::
+ - A high-level client library specifically designed for API's that implement CRUD operations.
+ - A self-contained package that facilitates communication with API's.
+ - Utilizes low-level libraries with minimal overhead.
+ - Follows best practices of low-level libraries and protocols to ensure reliability.
+
+By utilizing CRUD operations in API design, this package promotes a more meaningful relationship in the code, rather than relying on web methods such as GET, POST, PUT, PATCH, and DELETE.
 
 User Guide
 ----------

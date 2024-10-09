@@ -2,6 +2,26 @@ Authentication
 ==============
 
 
+Client Auth
+-----------
+
+When authenticating with the Client, the Auth argument will detect how you want
+to authenticate.  If you don't use the Auth argument no authentication is used.
+
+If you supply only a string it will be used as a bearer token.  A list or tuple
+will be used for Username and Password, and lastly an Auth Class is a complex
+Workflow. (eg, See OAuth2 below)
+
+    >>> from cruds import Client
+    >>>
+    >>> # Authentication with Token
+    >>> api = Client(host="https://localhost/api/v1/",
+    ...          auth="bearer-token")
+    >>>
+    >>> # Authentication with Username and Password
+    >>> api = Client(host="https://localhost/api/v1/",
+    ...          auth=("username", "password"))  # Must be 2 items only
+
 OAuth2 Workflows
 ----------------
 
@@ -20,7 +40,7 @@ is taken care of automatically.
     >>> api = Client(
     ...     host="https://localhost/api/v1/",
     ...     auth=OAuth2(
-                url="https://localhost/token",
+    ...         url="https://localhost/token",
     ...         client_id="id",
     ...         client_secret="secret",
     ...         scope="api",

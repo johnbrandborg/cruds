@@ -6,8 +6,8 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_cruds&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=johnbrandborg_cruds)
 [![Documentation Status](https://readthedocs.org/projects/cruds/badge/?version=latest)](https://cruds.readthedocs.io/en/latest/?badge=latest)
 
-CRUDs is a high level library for API's, and is ideal for automated data processing
-and interactive environments like Notebooks.
+**CRUDs** is a high level client library for API's, and is ideal for back-end
+communication, automated data processing, and interactive environments like Notebooks.
 
 ```python
 >>> import cruds
@@ -15,7 +15,7 @@ and interactive environments like Notebooks.
 >>> catfact_ninja = cruds.Client(host="https://catfact.ninja/")
 >>>
 >>> data = catfact_ninja.read("fact")
->>> type(date)  # Python built-in data types you can use straight away!
+>>> type(date)  # Python built-in data types you can use instantly!
 <class 'dict'>
 ```
 
@@ -44,11 +44,16 @@ $ pip install cruds
 
 ### Documentation
 
-For more information about how to use CRUDS, please visit [Read the Docs](https://cruds.readthedocs.io).
+Whether you are an data engineer wanting to retrieve or load data, a developer
+writing software for the back-of-the-front-end, or someone wanting to contribute
+to the project, for more information about CRUDs please visit
+[Read the Docs](https://cruds.readthedocs.io).
 
 ## License
 
-CRUDs is released under the MIT License. See the bundled LICENSE file for details.
+CRUDs is released under the MIT License. See the bundled
+[LICENSE file](https://github.com/johnbrandborg/cruds/blob/main/LICENSE)
+for details.
 
 ## Credits
 

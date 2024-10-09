@@ -3,16 +3,19 @@
 Development
 ===========
 
+At this time because the CRUDs code base is located on a repository not located
+under an Orgination, to contribute it is recommended that you create a fork of
+CRUDs and then `Create a PR <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork>`_
+from there.
+
 Setup
 -----
 
-You can clone the source code from the official `Github <https://github.com/johnbrandborg/cruds>`_
-repository::
+Once you have a forked the CRUD repository and obtained a local copy of the
+source code use the develop target to install the package in edit mode and the
+extra packages used for development.
 
-    $ git clone https://github.com/johnbrandborg/cruds.git
-
-Once you have a local copy of the source code use the make command to install
-the package in edit mode with the develop extras::
+.. code-block:: console
 
     $ cd cruds
     $ make develop
