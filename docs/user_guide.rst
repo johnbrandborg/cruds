@@ -1,3 +1,4 @@
+============
 Installation
 ============
 
@@ -18,7 +19,7 @@ Source Code
 -----------
 
 If you would like to install an latest unreleased source code you can clone it from
-`Github <https://github.com/johnbrandborg/cruds>`_.
+`Github CRUDs repository <https://github.com/johnbrandborg/cruds>`_.
 
 Using a git client you can clone the repository and install it with pip like so::
 
@@ -27,38 +28,59 @@ Using a git client you can clone the repository and install it with pip like so:
 
 For developers wanting to contribute, please visit the :ref:`development` section.
 
+=============
 General Usage
 =============
 
-Unlike other HTTP packages that you have handle the full URL and methods, with
-CRUDs the object you create is a representation of an API.  You can then interact
-with the API using CRUD operations.
+Unlike other HTTP packages that require the full URL and methods as arguments with
+every request, with CRUDs the object you create is a representation of a platform
+interface.  In it's most basic from only the host name is required when creating
+your client instance.
 
-All features can be adjusted on the Client to suit most needs.
+.. code-block:: python
 
-    >>> # Send and receive raw data and ignore bad status codes
-    >>> api = Client(host="https://localhost/api/v1/",
-    ...          serialize=False,
-    ...          raise_status=False)
-    >>>
-    >>> # Disable SSL Verification
-    >>> api = Client(host="https://localhost/api/v1/",
-    ...          verify_ssl=False)
+    from cruds import Client
+
+    api = Client("https://host/")
+
+When creating the client all features can be adjusted to suit most needs.
+
+.. code-block:: python
+
+    # Disable retries and set the required timeout
+    api = Client("https://host/", retries=0, timeout=20)
+
+    # Send and receive raw data and ignore bad status codes
+    api = Client("https://host/", serialize=False, raise_status=False)
+
+    # Disable SSL Verification
+    api = Client("https://host/", verify_ssl=False)
+
+By default CRUDs will raise an exception if it is not able to give you your
+data.  While uncommon if required to ignore a status code raising an exception
+you can do this by adding and removing that status code into the ignore set:
+
+.. code-block:: python
+
+	api.status_ignore.add(409)
+	api.status_ignore.remove(409)
 
 Once the client has been created, CRUD requests can be made by supplying URI's,
 data & params with Dictionaries.
 
 **Example**
 
-    >>> # Create a User
-    >>> api.create(uri="user", data={"name": "fred"}, params={"company_id": "1003"})
-    >>>
-    >>> # Update the User details
-    >>> id = api.read(uri="user", params={"name": "fred", "select": "id"})
-    >>> api.update(uri=f"user/{id}", data={"name": "Fred"})
-    >>>
-    >>> # Delete the User
-    >>> api.delete(uri=f"user/{id}")
+.. code-block:: python
+
+    # Create a User
+    api.create("user", data={"name": "fred"}, params={"company_id": "1003"})
+
+    # Update the User details
+    id = api.read("user", params={"name": "fred", "select": "id"})
+    api.update(f"user/{id}", data={"name": "Fred"})
+
+    # Delete the User
+    api.delete(f"user/{id}")
 
 By default `update` will use a PATCH method which generally indicates only updating
 the set of specific values.  An `update` may also use the PUT method to perform a
@@ -71,16 +93,88 @@ To make it easier to understand how to use CRUD operations, here is a breakdown
 of the relevant web method requests using the Client Class methods. While they
 are closely related, there is a minor difference to be aware of.
 
-    >>> Client.create()             # -> POST request
-    >>> Client.read()               # -> GET request
-    >>> Client.update()             # -> PATCH request
-    >>> Client.update(replace=True) # -> PUT request
-    >>> Client.delete()             # -> DELETE request
+.. code-block:: python
+
+    Client.create()             # -> POST request
+    Client.read()               # -> GET request
+    Client.update()             # -> PATCH request
+    Client.update(replace=True) # -> PUT request
+    Client.delete()             # -> DELETE request
 
 While most clients require you to handle web response objects and deal with
 issues, retries, and data extraction, our CRUD Client methods simplify the process
 by only returning the necessary data. In the event of a request issue, an error
 will be raised, ensuring a more efficient and streamlined experience.
+
+Authentication
+--------------
+
+When authenticating with the Client, the Auth argument will detect how you want
+to authenticate.  If you don't use the Auth argument no authentication is used.
+
+If you supply only a string it will be used as a bearer token.  A list or tuple
+will be used for Username and Password, and lastly an Auth Class is a complex
+Workflow. (eg, See OAuth2 below)
+
+.. code-block:: python
+
+    from cruds import Client
+
+    # Authentication with Token
+    api = Client("https://host/", auth="bearer-token")
+
+    # Authentication with Username and Password
+    api = Client("https://host/", auth=("username", "password"))
+
+OAuth2 Workflows
+----------------
+
+Access tokens can be generated by OAuth2 servers.  CRUDs supports the Authentication
+and Authorization Flows:
+
+ 1. Client Credentials
+ 2. Resource Owner Password (if a username and password is supplied)
+
+When an `expires in` time is returned by the server the access token refreshing
+is taken care of automatically.
+
+.. code-block:: python
+
+    from cruds import Client
+    from cruds.auth import OAuth2
+
+    api = Client(
+        host="https://host/",
+        auth=OAuth2(
+            url="https://host/token",
+            client_id="id",
+            client_secret="secret",
+            scope="api",
+            )
+        )
+
+.. note::
+
+  The OAuth 2.0 framework will take time to implement and implemented properly.
+  Support in improving this coverage is very welcome. Let the project know of
+  any Issues.
+
+SerDes
+------
+
+By default the Client of the API will attempt to Serialize and De-serialize JSON
+into and from Python built-in data types so you never have to worry about
+dealing with text or byte code.  The API however needs to indicate the content
+type is JSON, if not the Client will attempt to return JSON, and will fall-back
+to return the byte code.
+
+If you create the Client with serialization disabled, only the byte code is
+returned.
+
+.. note::
+
+	If there is a need to expand on the SerDes content types, please raise a
+	issue in the Github repository so the project is aware of it.
 
 Logging
 -------
@@ -92,39 +186,44 @@ If you want to see logging set the level using the standard logging interface.
 DEBUG will show you URLLib3, but INFO will give you general information from
 the CRUDs Client.
 
-    >>> import logging
-    >>> import cruds
-    >>>
-    >>> logging.basicConfig(level=logging.INFO)
+.. code-block:: python
+
+    import logging
+
+    logging.basicConfig(level=logging.INFO)
 
 Extensibility
 -------------
 
 The library has been created with extensibility in mind, so that Software Development
-Kits can be created.  There is two ways that this can be done, one as described below
-or by creating an Interface.
+Kits can be created.  There are two ways that this can be done, one as described below
+or by creating an 'Interface As Code'.
 
-The basic approach is to create a new class and add the logic requirements needed to
-make the requests.
+The basic approach is to create a new subclass and add the logic requirements needed to
+make the requests.  You are effectively just adding the host name into the
+initialization and the URI into the methods:
 
-    >>> from cruds import Client
-    >>>
-    >>> class CatFactNinja(Client):
-    ...     """Cat Fact Ninja Interface"""
-    ...
-    ...     _fact_uri = "fact"
-    ...
-    ...     def __init__(self, **kwargs):
-    ...         host = "http://catfact.ninja/"
-    ...         super().__init__(host=host, **kwargs)
-    ...
-    ...     @property
-    ...     def fact(self):
-    ...         """ Get a Fact about Cats"""
-    ...         return self.read(self._fact_uri)
-    >>>
-    >>> cat = CatFactNinja()
-    >>> print(cat.fact)
+.. code-block:: python
+
+    from cruds import Client
+
+    class CatFactNinja(Client):
+        """Cat Fact Ninja Interface"""
+
+        # Use private attributes for storing common URI's.
+        _fact_uri = "fact"
+
+        def __init__(self, **kwargs):
+            # Init Super with host name with kwargs
+            super().__init__("http://catfact.ninja/", **kwargs)
+
+        @property
+        def fact(self):
+            """ Get a Fact about Cats"""
+            return self.read(self._fact_uri).get("fact")
+
+    cat = CatFactNinja()
+    print(cat.fact)
 
 CRUDs supports creating interfaces with large amounts of models as a mixture of
 YAML configuration and functions for the common logic.  This significantly

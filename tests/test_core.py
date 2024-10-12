@@ -232,12 +232,12 @@ def test_Client_raise_status_500():
         api._process_resp("", mock_resp)
 
 
-def test_Client_raise_status_whitelist():
+def test_Client_raise_status_ignore():
     """
-    Check the response status code 400 doesn't raises an exception when whitelisted.
+    Check the response status code 400 doesn't raises an exception when ignored.
     """
     api = cruds.Client(host="https://localhost", retries=0)
-    api.status_whitelist.append(400)
+    api.status_ignore.add(400)
     mock_resp = urllib3.HTTPResponse(body=b'{"name": "test"}', status=400)
     api._process_resp("", mock_resp)
 

@@ -6,6 +6,7 @@ import abc
 import logging
 from json.decoder import JSONDecodeError
 import sys
+from warnings import warn
 
 from typing import Any, Dict, List, Union
 from urllib.parse import urlencode
@@ -47,10 +48,10 @@ class Client:
     as JSON. All parameters are key-word values, and positional arguments are
     not accepted.
 
-    Attributes
-    ----------
-    status_whitelist : list
-        A list of status codes to ignore by instances with raise for status
+    Instance Attributes
+    -------------------
+    status_ignore : set
+        A set of status codes to ignore by instances with raise for status
         enabled.
 
     Methods
@@ -65,10 +66,7 @@ class Client:
         Makes a DELETE request to the API Server
     """
 
-    status_whitelist: List[int] = []
-
     def __init__(self,
-                 *,
                  host: str,
                  auth=None,
                  manager=None,
@@ -118,6 +116,7 @@ class Client:
                     raise_status)
 
         self.raise_status: bool = raise_status
+        self.status_ignore: set = set()
         self.timeout: float = timeout
 
         if isinstance(manager, (urllib3.PoolManager, urllib3.ProxyManager)):
@@ -340,7 +339,7 @@ class Client:
             f"Memory: {sys.getsizeof(response.data)} Bytes"
         )
 
-        if self.raise_status and response.status not in self.status_whitelist:
+        if self.raise_status and response.status not in self.status_ignore:
             if 400 <= response.status < 500:
                 error_type = "Client"
             elif 500 <= response.status < 600:

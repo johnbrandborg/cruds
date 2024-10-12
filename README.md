@@ -6,7 +6,7 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_cruds&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=johnbrandborg_cruds)
 [![Documentation Status](https://readthedocs.org/projects/cruds/badge/?version=latest)](https://cruds.readthedocs.io/en/latest/?badge=latest)
 
-**CRUDs** is a high level client library for API's, and is ideal for back-end
+**CRUDs** is a high level client library for API's written in Python, and is ideal for back-end
 communication, automated data processing, and interactive environments like Notebooks.
 
 ```python

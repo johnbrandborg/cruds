@@ -20,7 +20,7 @@ Release v\ |version|.
     :target: https://github.com/johnbrandborg/cruds/blob/main/LICENSE
     :alt: License Badge
 
-**CRUDs** is a high level client library for API's, and is ideal for back-end
+**CRUDs** is a high level client library for API's written in Python, and is ideal for back-end
 communication, automated data processing and interactive environments like Notebooks.
 
 --------------------
@@ -77,7 +77,6 @@ and examples of way to use it to move data.
    :maxdepth: 2
 
    user_guide
-   authentication
    interfaces
    changelog
    development
@@ -90,7 +89,7 @@ For developers searching for information relating more closely to code
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Package Contents:
 
    modules
 
