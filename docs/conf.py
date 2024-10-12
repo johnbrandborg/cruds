@@ -37,5 +37,9 @@ todo_include_todos = True
 html_theme = "alabaster"
 html_static_path = ["_static"]
 html_theme_options = {
-    "fixed_sidebar": True
+    "description": "API interaction made easy",
+    "github_user": "johnbrandborg",
+    "github_repo": "cruds",
+    "github_banner": True,
+    "fixed_sidebar": True,
 }
