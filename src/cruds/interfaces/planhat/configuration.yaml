@@ -6,7 +6,7 @@ api:
     docstring: |
       Handles sending and receiving data using specifically with PlanHat's API.
 
-      planhat = PlanHat(company_id="638dc2b67479f6481b088c50", auth="abc123")
+      planhat = Planhat(api_token="9PhAfMO3WllHUmmhJA4eO3tJPhDck1aKLvQ5osvNUfKYdJ7H")
       print(planhat.asset.get_by_id("extid-21432948"))
 
       Most methods will use the normal API token for auth, but some will use

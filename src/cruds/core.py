@@ -6,9 +6,8 @@ import abc
 import logging
 from json.decoder import JSONDecodeError
 import sys
-from warnings import warn
 
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, Union
 from urllib.parse import urlencode
 
 import certifi
@@ -20,6 +19,11 @@ DEFAULT_TIMEOUT = 300.0
 
 
 class Auth(metaclass=abc.ABCMeta):
+    """
+    An Abstract Base Class that is used for implement the required interface
+    that is used for Authentcation by the Client class.
+    """
+
     @abc.abstractmethod
     def access_token(self) -> str:
         """
