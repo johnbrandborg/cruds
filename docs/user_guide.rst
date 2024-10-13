@@ -50,7 +50,7 @@ When creating the client all features can be adjusted to suit most needs.
     # Disable retries and set the required timeout outside of defaults.
     api = Client("https://host/", retries=0, timeout=20)
 
-    # Send and receive raw data and ignore bad status codes
+    # Send & receive raw data and never raise an exception on bad status codes
     api = Client("https://host/", serialize=False, raise_status=False)
 
     # Disable SSL Verification
@@ -62,8 +62,8 @@ you can do this by adding and removing that status code into the ignore set:
 
 .. code-block:: python
 
-	api.status_ignore.add(409)
-	api.status_ignore.remove(409)
+    api.status_ignore.add(409)
+    api.status_ignore.remove(409)
 
 Once the client has been created, CRUD requests can be made by supplying URI's,
 data & params with Dictionaries.
@@ -72,39 +72,46 @@ data & params with Dictionaries.
 
 .. code-block:: python
 
+    user_uri = "/api/v1/user"
+
     # Create a User
-    api.create("user", data={"name": "fred"}, params={"company_id": "1003"})
+    api.create(user_uri, data={"name": "fred"}, params={"company_id": "1003"})
+
+    # Read User details
+    fred = api.read(user_uri, params={"name": "fred", "select": "id"})
 
     # Update the User details
-    id = api.read("user", params={"name": "fred", "select": "id"})
-    api.update(f"user/{id}", data={"name": "Fred"})
+    api.update(f"{user_uri}/{fred}", data={"name": "Fred"})
 
     # Delete the User
-    api.delete(f"user/{id}")
+    api.delete(f"{user_uri}/{fred}")
 
-By default `update` will use a PATCH method which generally indicates only updating
-the set of specific values.  An `update` may also use the PUT method to perform a
-replacement, which can be used by setting `replace` to True.
+While most HTTP clients require you to handle web response objects and deal with
+issues, retries, and data extraction, our CRUD Client methods simplify the process
+by only returning the necessary data. In the event of a request issue, an error
+will be raised, ensuring a more efficient and streamlined experience.
 
 Method Relationship
 -------------------
 
 To make it easier to understand how to use CRUD operations, here is a breakdown
 of the relevant web method requests using the Client Class methods. While they
-are closely related, there is a minor difference to be aware of.
+are closely related, there is a minor difference to be aware of.  Generally the
+relation is one to one with the exception being ``update``.
 
-.. code-block:: python
+By default ``update`` will use a PATCH method which generally indicates only updating
+the set of specific values.  An ``update`` may also use the PUT method to perform a
+replacement, which can be used by setting ``replace`` to ``True``.
 
-    Client.create()             # -> POST request
-    Client.read()               # -> GET request
-    Client.update()             # -> PATCH request
-    Client.update(replace=True) # -> PUT request
-    Client.delete()             # -> DELETE request
-
-While most clients require you to handle web response objects and deal with
-issues, retries, and data extraction, our CRUD Client methods simplify the process
-by only returning the necessary data. In the event of a request issue, an error
-will be raised, ensuring a more efficient and streamlined experience.
+==================== ===========
+Client Method        HTTP Method
+==================== ===========
+create()             POST
+read()               GET
+update()             PATCH
+update(replace=True) PUT
+delete()             DELETE
+==================== ===========
 
 Authentication
 --------------
@@ -179,8 +186,8 @@ If the Client has serialization disabled, only the byte code is returned.
 
 .. note::
 
-	If there is a need to expand on the SerDes content types, please raise a
-	issue in the Github repository so the project is aware of it.
+    If there is a need to expand on the SerDes content types, please raise a
+    issue in the Github repository so the project is aware of it.
 
 Logging
 -------

@@ -3,10 +3,11 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+===============================
 "Create, Read, Update, Delete"s
 ===============================
 
-Release v\ |version|.
+Release |version|.
 
 .. image:: https://img.shields.io/pypi/pyversions/cruds?logo=python&logoColor=FFE873
     :target: https://pypi.org/project/cruds/
@@ -27,7 +28,7 @@ communication, automated data processing and interactive environments like Noteb
 
     >>> import cruds
     >>>
-    >>> catfact_ninja = cruds.Client(host="https://catfact.ninja/")
+    >>> catfact_ninja = cruds.Client("https://catfact.ninja/")
     >>>
     >>> data = catfact_ninja.read("fact")
     >>> type(data)  # Python built-in data types you can use instantly!

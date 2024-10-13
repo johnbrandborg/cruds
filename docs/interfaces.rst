@@ -13,7 +13,7 @@ Currently available:
 Planhat
 -------
 
-Planhat is customer success platform with imense capabilities.  CRUDs offers a
+Planhat is customer success platform with immense capabilities.  CRUDs offers a
 full implementation of the Planhat platform as an Interfaces.
 
 Once you have a Planhat client create be sure to look at the comprehensive

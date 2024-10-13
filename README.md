@@ -12,7 +12,7 @@ communication, automated data processing, and interactive environments like Note
 ```python
 >>> import cruds
 >>>
->>> catfact_ninja = cruds.Client(host="https://catfact.ninja/")
+>>> catfact_ninja = cruds.Client("https://catfact.ninja/")
 >>>
 >>> data = catfact_ninja.read("fact")
 >>> type(date)  # Python built-in data types you can use instantly!
