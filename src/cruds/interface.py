@@ -7,7 +7,7 @@ from jsonschema import validate
 import yaml
 
 
-logger= getLogger(__name__)
+logger = getLogger(__name__)
 
 INTERFACE_SCHEMA = f"{os.path.dirname(__file__)}/interface_schema.yaml"
 
@@ -16,6 +16,7 @@ class ModelFactory:
     """
     Class Factory that is used as a descriptor
     """
+
     def __init__(self, docstring: str, uri: str, methods: dict) -> None:
         self.docstring = docstring
         self.uri = uri
@@ -37,11 +38,15 @@ class ModelFactory:
         for making CRUDs to the API.
         """
         if not hasattr(self, "model"):
-            Model: Any = type(self.name, (object,), {
-                "_owner": obj,
-                "_uri": self.uri,
-                **self.methods,
-            })
+            Model: Any = type(
+                self.name,
+                (object,),
+                {
+                    "_owner": obj,
+                    "_uri": self.uri,
+                    **self.methods,
+                },
+            )
             Model.__doc__ = self.docstring
             self.model = Model()
 
@@ -75,14 +80,12 @@ def _create_interfaces_v1(config: dict):
 
             # Method declaration priority order.  Default is only used
             # if the model doesn't have it.
-            method_list += (model.get("methods")
-                or api.get("default_model_methods")
-                or []
+            method_list += (
+                model.get("methods") or api.get("default_model_methods") or []
             )
 
             method_map: dict[str, object] = {
-                name: interface_code.get(name)
-                for name in method_list
+                name: interface_code.get(name) for name in method_list
             }
 
             models[model["name"].lower()] = ModelFactory(
@@ -96,10 +99,14 @@ def _create_interfaces_v1(config: dict):
             for name in api.get("methods") or ["__init__"]
         }
 
-        Interface: Any = type(api["name"], (object,), {
-            **interface_methods,
-            **models,
-        })
+        Interface: Any = type(
+            api["name"],
+            (object,),
+            {
+                **interface_methods,
+                **models,
+            },
+        )
         Interface.__doc__ = api.get("docstring")
 
         yield (api["name"], Interface)

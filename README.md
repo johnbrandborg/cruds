@@ -24,11 +24,11 @@ aims to handle the majority of the setup needed for production so you can focus
 on moving data.
 
 Features:
- * Authentication with a bearer token, username & password, or OAuth2
- * Data serialization/de-serialization (Currently only JSON format)
- * Request parameters as Dictionaries and automatically URL encoded
+ * Authentication: Username & Password, Bearer Token or OAuth2
+ * JSON Serialization/Deserialization
+ * Request parameters and automatically URL encoded
  * Default connection timeout (5 minutes)
- * Raises exceptions on bad status codes (Can be whitelisted)
+ * Raises exceptions on bad status codes
  * Retries with back-off
  * SSL Verification
  * Logging for monitoring

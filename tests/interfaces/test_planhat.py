@@ -78,7 +78,7 @@ def api_responses(example_data, number) -> Generator:
     to stop making requests.
     """
     for i in range(0, len(example_data), number):
-        yield example_data[i:i + number]
+        yield example_data[i : i + number]
 
     yield []
 
@@ -122,7 +122,7 @@ def test_Planhat_init(planhat):
     EXCEPTED_AUTH_HEADER = "Bearer 9PhAfMO3WllHUmmhJA4eO3tJPhDck1aKLvQ5osvNUfKYdJ7H"
 
     assert isinstance(planhat.client, Client)
-    assert planhat.client._request_headers["Authorization"] == EXCEPTED_AUTH_HEADER
+    assert planhat.client.request_headers["Authorization"] == EXCEPTED_AUTH_HEADER
 
     assert planhat._delay == 0.3
     assert planhat.calls_per_min == 200
@@ -176,7 +176,7 @@ def test_Planhat_bulk_upsert_response_check_no_errors(planhat):
             "nonupdates": 0,
             "modified": [],
             "upsertedIds": [],
-            "permissionErrors": []
+            "permissionErrors": [],
         }
     ]
     assert planhat.bulk_upsert_response_check() is None
@@ -198,7 +198,7 @@ def test_Planhat_bulk_upsert_response_check_with_errors(planhat):
             "nonupdates": 0,
             "modified": [],
             "upsertedIds": [],
-            "permissionErrors": []
+            "permissionErrors": [],
         }
     ]
     with pytest.raises(PlanhatUpsertError) as excinfo:
@@ -223,8 +223,7 @@ def test_Model_model_init(planhat_model):
     """
 
     assert planhat_model._uri == "planhat_model_uri"
-    assert hasattr(planhat_model, "_owner") \
-            and isinstance(planhat_model._owner, Mock)
+    assert hasattr(planhat_model, "_owner") and isinstance(planhat_model._owner, Mock)
 
 
 def test_Model_create(planhat_model):
@@ -236,8 +235,7 @@ def test_Model_create(planhat_model):
     planhat_model.create(data=create_sample)
 
     planhat_model._owner.client.create.assert_called_with(
-        'planhat_model_uri',
-        create_sample
+        "planhat_model_uri", create_sample
     )
 
 
@@ -319,7 +317,7 @@ def test_Model_bulk_upsert_chunksize_two(planhat_model):
         [
             {"_id": "4"},
             {"_id": "5"},
-        ]
+        ],
     )
 
 
@@ -346,8 +344,7 @@ def test_Model_update(planhat_model):
     planhat_model.update(native_id, update_sample)
 
     planhat_model._owner.client.update.assert_called_with(
-        f"planhat_model_uri/{native_id}",
-        update_sample
+        f"planhat_model_uri/{native_id}", update_sample
     )
 
 
@@ -440,12 +437,7 @@ def test_Model_get_dimension_generator(planhat_model):
 
     planhat_model._get_all_data.assert_called_with(
         "planhat_model_uri",
-        {
-            "from": 1,
-            "to": 1,
-            "limit": 10000,
-            "offset": 0
-        },
+        {"from": 1, "to": 1, "limit": 10000, "offset": 0},
         0,
     )
 
@@ -477,6 +469,7 @@ def test_Model_get_dimension_generator_with_company_and_dimension(planhat_model)
         0,
     )
 
+
 def test_Model_get_list_generator(planhat_model):
     """
     Test the get dimension data method creates a sub generator off _get_all_data
@@ -492,14 +485,10 @@ def test_Model_get_list_generator(planhat_model):
 
     planhat_model._get_all_data.assert_called_with(
         "planhat_model_uri",
-        {
-            "sort": "-_id",
-            "select": "name, companyId",
-            "limit": 2000,
-            "offset": 0
-        },
+        {"sort": "-_id", "select": "name, companyId", "limit": 2000, "offset": 0},
         0,
     )
+
 
 def test_Model__get_all_data_standard(planhat_model):
     """
@@ -511,7 +500,6 @@ def test_Model__get_all_data_standard(planhat_model):
     uri, params = "get_all_standard_uri", {"limit": 2000, "offset": 0}
 
     for index, data in enumerate(planhat_model._get_all_data(uri, params, 0)):
-
         planhat_model._owner.client.read.assert_called_with(uri, params)
         assert data == EXAMPLE_GET_DIMENSION_DATA
 
@@ -531,7 +519,6 @@ def test_Model__get_all_data_max_requests(planhat_model):
     uri, params = "get_all_max_requests_uri", {"limit": step_size, "offset": 0}
 
     for index, data in enumerate(planhat_model._get_all_data(uri, params, 1)):
-
         planhat_model._owner.client.read.assert_called_with(uri, params)
         assert data == [EXAMPLE_GET_DIMENSION_DATA[index]]
 
@@ -558,7 +545,7 @@ def test_Model__get_all_data_with_limit_one(planhat_model):
         step: int = index * step_size
 
         planhat_model._owner.client.read.assert_called_with(uri, updated_params)
-        assert data == EXAMPLE_GET_DIMENSION_DATA[step:step + step_size]
+        assert data == EXAMPLE_GET_DIMENSION_DATA[step : step + step_size]
 
         updated_params["offset"] += step_size
         print("INDEX", index)
@@ -586,7 +573,7 @@ def test_Model__get_all_data_with_limit_two(planhat_model):
         step: int = index * step_size
 
         planhat_model._owner.client.read.assert_called_with(uri, updated_params)
-        assert data == EXAMPLE_GET_DIMENSION_DATA[step:step + step_size]
+        assert data == EXAMPLE_GET_DIMENSION_DATA[step : step + step_size]
 
         updated_params["offset"] += step_size
 
@@ -594,6 +581,7 @@ def test_Model__get_all_data_with_limit_two(planhat_model):
 
 
 ## Analytics Endpoint Tests
+
 
 def test_Model_bulk_insert_metrics(planhat_model):
     """
@@ -605,7 +593,7 @@ def test_Model_bulk_insert_metrics(planhat_model):
         "cId": "abc123",
         "action": "Logged in",
         "weight": 1,
-        "count": 1
+        "count": 1,
     }
 
     planhat_model._owner.tenant_token = TEST_TENANT_TOKEN
@@ -639,8 +627,7 @@ def test_Model_create_activity(planhat_model):
     planhat_model.create_activity(data=create_sample)
 
     planhat_model._owner.client_analytics.create.assert_called_with(
-        f"planhat_model_uri/{TEST_TENANT_TOKEN}",
-        create_sample
+        f"planhat_model_uri/{TEST_TENANT_TOKEN}", create_sample
     )
 
 
@@ -662,6 +649,5 @@ def test_Model_segment(planhat_model):
     planhat_model.segment(data=create_sample)
 
     planhat_model._owner.client_analytics.create.assert_called_with(
-        "dock/segment",
-        create_sample
+        "dock/segment", create_sample
     )

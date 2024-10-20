@@ -9,7 +9,7 @@ develop:  update-pip  # Installs all requirements and testing requirements
 		&& pre-commit install
 
 test:  # Perform unit testing on the source code
-	@python -m pytest
+	@python -m pytest -vvv
 
 test-report:  # Perform unit testing on the source code with a coverage report
 	@python -m pytest --cov-report=xml

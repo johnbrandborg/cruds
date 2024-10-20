@@ -9,30 +9,30 @@ from urllib.parse import urlencode
 
 import urllib3
 
-from .core import Auth
+from .core import AuthABC
 from .exception import OAuthAccessTokenError
 
-logger= logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 TOKEN_REFRESH_LEAD_TIME = 30
 
 
-class OAuth2(Auth):
+class OAuth2(AuthABC):
     """
     A client for the OAuth 2.0 specification, supporting access token using the
     'Client Credientials' and 'Password' grant type.
     """
 
     def __init__(
-            self,
-            url: str,
-            client_id: str,
-            client_secret: str,
-            scope: str,
-            authorization_details = None,
-            username = None,
-            password = None,
-        ) -> None:
+        self,
+        url: str,
+        client_id: str,
+        client_secret: str,
+        scope: str,
+        authorization_details=None,
+        username=None,
+        password=None,
+    ) -> None:
         """
         Arguments
         ---------
@@ -83,7 +83,7 @@ class OAuth2(Auth):
 
             # Setup Authentication
             request_headers = urllib3.make_headers(
-                    basic_auth=f"{self.client_id}:{self.client_secret}"
+                basic_auth=f"{self.client_id}:{self.client_secret}"
             )
 
         # Support Password Grant Type in 2.0
@@ -93,12 +93,16 @@ class OAuth2(Auth):
             fields["password"] = self.password
 
         # Rich Authorization Request (RAR)
-        if self.authorization_details is not None and isinstance(self.authorization_details, list):
-            fields['authorization_details'] = json.dumps(self.authorization_details)
+        if self.authorization_details is not None and isinstance(
+            self.authorization_details, list
+        ):
+            fields["authorization_details"] = json.dumps(self.authorization_details)
         elif self.authorization_details is not None:
-            fields['authorization_details'] = self.authorization_details
+            fields["authorization_details"] = self.authorization_details
 
-        request_headers["Content-Type"] = "application/x-www-form-urlencoded; charset=utf-8"
+        request_headers["Content-Type"] = (
+            "application/x-www-form-urlencoded; charset=utf-8"
+        )
 
         # Make request to the Server
         response = urllib3.request(
@@ -115,8 +119,10 @@ class OAuth2(Auth):
             raise OAuthAccessTokenError(msg)
 
         if not 200 <= response.status < 299:
-            msg: str = f"Error with status code {response.status}" \
-                  f" Message: {response.data.decode('utf-8')}"
+            msg: str = (
+                f"Error with status code {response.status}"
+                f" Message: {response.data.decode('utf-8')}"
+            )
             raise urllib3.exceptions.HTTPError(msg)
 
         access_token = response.json()
@@ -138,4 +144,6 @@ class OAuth2(Auth):
         if "expires_in" not in state:
             return True
 
-        return int(state["created"] + state["expires_in"]) > (int(time()) + TOKEN_REFRESH_LEAD_TIME)
+        return int(state["created"] + state["expires_in"]) > (
+            int(time()) + TOKEN_REFRESH_LEAD_TIME
+        )

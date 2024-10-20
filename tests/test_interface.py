@@ -16,22 +16,17 @@ class Interface:
     test = cruds.interface.ModelFactory(
         docstring="Model Class",
         uri="test",
-        methods={
-            "echo": lambda _, x: "bar" if x == "foo" else "baz"
-        },
+        methods={"echo": lambda _, x: "bar" if x == "foo" else "baz"},
     )
 
 
 @pytest.fixture
 def interface():
-
     class Interface:
         test = cruds.interface.ModelFactory(
             docstring="Model Class",
             uri="test_uri",
-            methods={
-                "echo": lambda _, x: "bar" if x == "foo" else "baz"
-            },
+            methods={"echo": lambda _, x: "bar" if x == "foo" else "baz"},
         )
 
     return Interface()
@@ -107,14 +102,14 @@ def test__create_interface_v1_with_package_and_models(monkeypatch):
 
     class MockPackage:
         __dict__: Dict[str, object] = {
-                "__init__": lambda _: None,
-                "echo": lambda _, x: "bar" if x == "foo" else "baz"
-            }
+            "__init__": lambda _: None,
+            "echo": lambda _, x: "bar" if x == "foo" else "baz",
+        }
 
         def __init__(self, name) -> None:
             pass
 
-    monkeypatch.setattr(importlib, 'import_module', MockPackage)
+    monkeypatch.setattr(importlib, "import_module", MockPackage)
 
     config = {
         "api": [
@@ -128,7 +123,7 @@ def test__create_interface_v1_with_package_and_models(monkeypatch):
                         "methods": [
                             "echo",
                             "doesnt_exist",
-                        ]
+                        ],
                     }
                 ],
             }
@@ -159,11 +154,11 @@ def test_load_config_invalid_version():
     version: 0
     """
 
-    with patch("builtins.open", mock_open()), \
-            patch("builtins.open", mock_open(read_data=sample_config)), \
-            patch("cruds.interface.validate", mock_validate), \
-            pytest.raises(ValueError) as e_info:
-
+    with patch("builtins.open", mock_open()), patch(
+        "builtins.open", mock_open(read_data=sample_config)
+    ), patch("cruds.interface.validate", mock_validate), pytest.raises(
+        ValueError
+    ) as e_info:
         cruds.interface.load_config("test_interface").__next__()
 
     assert "Configuration has no valid version" == str(e_info.value)
@@ -181,11 +176,11 @@ def test_load_config_version_1():
     version: 1
     """
 
-    with patch("builtins.open", mock_open()), \
-            patch("builtins.open", mock_open(read_data=sample_config)), \
-            patch("cruds.interface.validate", mock_validate), \
-            patch("cruds.interface._create_interfaces_v1", mock_create_interface_v1):
-
+    with patch("builtins.open", mock_open()), patch(
+        "builtins.open", mock_open(read_data=sample_config)
+    ), patch("cruds.interface.validate", mock_validate), patch(
+        "cruds.interface._create_interfaces_v1", mock_create_interface_v1
+    ):
         for interface in cruds.interface.load_config("test_interface"):
             assert interface == "Version1Interface"
             mock_create_interface_v1.assert_called_once_with({"version": 1})
