@@ -1,7 +1,13 @@
 Changelog
 =========
 
-Release 1.3.1 (October 16, 2024)
+Release 1.3.2 (October 21, 2024)
+--------------------------------
+
+Fixes:
+ - Adjust the setup so Interfaces are included in the package.
+
+Release 1.3.1 (October 20, 2024)
 --------------------------------
 
 Updates:

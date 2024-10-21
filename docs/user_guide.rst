@@ -198,10 +198,11 @@ Retries
 -------
 
 Connections, reads, redirects, and bad status codes are implemented in the CRUDs
-Client.  If any of these are encounted a retry will take place a total of 4 times
-across the different types.  Each retry will also backoff by a factor of 0.9 after
-the second attempt.  This can give the communication between the client and server
-time to get established or recover from being rate limited.
+Client to perform retries.  If any of these are encounted a retry will take place
+a total of 4 times across the different types.
+Each retry will also backoff by a factor of 0.9 after the second attempt.  This
+can give the communication between the client and server time to get established
+or recover from being rate limited.
 
 Status Codes:
 

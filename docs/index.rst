@@ -55,12 +55,12 @@ Purpose
 The purpose of this package is to simplify the process of interacting with APIs that implement CRUD (Create, Read, Update, Delete) operations.
 By using this package, developers can focus more on working with data rather than understanding complex web protocols.
 
-What CRUDs is not::
+What CRUDs is not:
  - A low-level client library that requires extensive coding for common requirements and production readiness.
  - A high-level client library designed for accessing websites and front-ends, which may contain unnecessary functionality for API usage. (Additional packages may still be required for common functionality)
  - A client library that should be used for API's that do not follow CRUD operation designs.
 
-What CRUDs is::
+What CRUDs is:
  - A high-level client library specifically designed for API's that implement CRUD operations.
  - A self-contained package that facilitates communication with API's.
  - Utilizes low-level libraries with minimal overhead.
