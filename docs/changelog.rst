@@ -1,11 +1,12 @@
 Changelog
 =========
 
-Release 1.3.2 (October 21, 2024)
+Release 1.3.3 (October 21, 2024)
 --------------------------------
 
 Fixes:
  - Adjust the setup so Interfaces are included in the package.
+ - Update to Authorization in request_headers to stop concatenation.
 
 Release 1.3.1 (October 20, 2024)
 --------------------------------

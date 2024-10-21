@@ -381,6 +381,4 @@ class Client:
             and isinstance(self.auth, AuthABC)
             and not self.auth.is_valid()
         ):
-            self.request_headers.add(
-                "Authorization", "Bearer " + self.auth.access_token()
-            )
+            self.request_headers["Authorization"] = "Bearer " + self.auth.access_token()
