@@ -1,5 +1,6 @@
 from copy import deepcopy
 from datetime import datetime
+from functools import partial
 from logging import getLogger
 from time import sleep
 from typing import Any, Dict, Generator, List, Union
@@ -116,7 +117,11 @@ def bulk_upsert(
     following keyables: _id, sourceId and/or externalId.
     """
     self._owner.bulk_upsert_response.clear()
-    operation = self._owner.client.create if with_post else self._owner.client.update
+    operation = (
+        self._owner.client.create
+        if with_post
+        else partial(self._owner.client.update, replace=True)
+    )
 
     for reference in range(0, len(data), chunk_size):
         next_reference: int = reference + chunk_size

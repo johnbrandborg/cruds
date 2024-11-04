@@ -1,6 +1,15 @@
 Changelog
 =========
 
+
+Release 1.3.6 (November 4, 2024)
+--------------------------------
+
+Fixes:
+ - Corrected the Planhat Metric model to correctly use bulk_insert_metrics.
+ - Allow Any data type to be serialized.
+ - Planhat Bulkupsert required replace argument to be set to True.
+
 Release 1.3.3 (October 21, 2024)
 --------------------------------
 

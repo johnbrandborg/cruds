@@ -275,7 +275,8 @@ def test_Model_bulk_upsert_results(planhat_model):
         {"_id": "1"},
     ]
 
-    def response(self, data):
+    def response(self, data, replace):
+        assert replace
         return [d.get("_id", "") for d in data]
 
     planhat_model._owner.client.update = response
@@ -318,6 +319,7 @@ def test_Model_bulk_upsert_chunksize_two(planhat_model):
             {"_id": "4"},
             {"_id": "5"},
         ],
+        replace=True,
     )
 
 
