@@ -160,9 +160,6 @@ class Client:
         # Setup Headers (Authentication)
         self.request_headers = urllib3.HTTPHeaderDict()
 
-        if serialize is True:
-            self.request_headers.add("Content-Type", "application/json")
-
         if isinstance(auth, str):
             self.request_headers.add("Authorization", f"Bearer {auth}")
             logger.info("Token authentication setup")
@@ -214,7 +211,7 @@ class Client:
         logger.info(f"API Create Operation to {url}")
 
         self._check_auth()
-        if self.serialize and isinstance(data, dict):
+        if self.serialize:
             response = self.manager.request(
                 method, url + safe_params, headers=self.request_headers, json=data
             )
@@ -294,7 +291,7 @@ class Client:
         logger.info(f"API Update Operation to {url}")
 
         self._check_auth()
-        if self.serialize and isinstance(data, dict):
+        if self.serialize:
             response = self.manager.request(
                 method, url + safe_params, headers=self.request_headers, json=data
             )

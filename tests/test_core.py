@@ -10,7 +10,7 @@ import urllib3
 import cruds
 from cruds.core import AuthABC
 
-request_headers = urllib3.HTTPHeaderDict({"Content-Type": "application/json"})
+request_headers = urllib3.HTTPHeaderDict()
 
 
 def test_Client_token_authentication():
@@ -92,6 +92,16 @@ def test_Client_create_operation_with_bytes(crud_api):
     crud_api.manager.request.assert_called_with(
         "POST",
         "https://localhost/user/2",
+        json=sample,
+        headers=request_headers,
+    )
+    assert resp.data == b'{"name": "test"}'
+
+    crud_api.serialize = False
+    resp = crud_api.create("user/2", data=sample)
+    crud_api.manager.request.assert_called_with(
+        "POST",
+        "https://localhost/user/2",
         body=sample,
         headers=request_headers,
     )
@@ -136,6 +146,16 @@ def test_Client_update_operation_with_bytes(crud_api):
     sample = b'{"test_name": "test_Client_update_operation"}'
     resp = crud_api.update("test", data=sample)
 
+    crud_api.manager.request.assert_called_with(
+        "PATCH",
+        "https://localhost/test",
+        json=sample,
+        headers=request_headers,
+    )
+    assert resp.data == b'{"name": "test"}'
+
+    crud_api.serialize = False
+    resp = crud_api.update("test", data=sample)
     crud_api.manager.request.assert_called_with(
         "PATCH",
         "https://localhost/test",
@@ -291,4 +311,4 @@ def test__check_auth_still_valid():
             return True
 
     api = cruds.Client(host="https://localhost", auth=MockAuth())
-    assert api.request_headers.get("Authorization") == None
+    assert api.request_headers.get("Authorization") is None
