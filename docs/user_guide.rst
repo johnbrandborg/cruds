@@ -225,9 +225,8 @@ Logging
 Because CRUDs is high level it has verbose logging to assist with capturing
 information around general operations.
 
-If you want to see logging set the level using the standard logging interface.
-DEBUG will show you URLLib3, but INFO will give you general information from
-the CRUDs Client.
+If you want to see logging set the level to INFO using the logging module as shown,
+below before you create the Client instance.
 
 **Recommended**
 
@@ -236,6 +235,9 @@ the CRUDs Client.
     import logging
 
     logging.basicConfig(level=logging.INFO)
+
+Setting the level to ``logging.DEBUG`` will show you URLLib3 messages which is
+a useful way to see what calls CRUDs makes to URLLib3.
 
 Extensibility
 -------------

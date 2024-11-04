@@ -196,7 +196,7 @@ api:
         methods:
           - epoc_days_format
           - get_dimension_data
-          - bulk
+          - bulk_insert_metrics
         uri: dimensiondata
 
       - name: NPS

@@ -41,4 +41,4 @@ Release 1.1.0 (May 14, 2024)
 ----------------------------
 
 In the CRUDs package, Interfaces can now be generated through YAML Configuration
-files. This is for API's that have many models with common request types.
+files. This is for APIs that have many models with common request types.

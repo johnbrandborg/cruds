@@ -1,5 +1,7 @@
 help:  # Displays the help menu with all the targets
-	@grep -E '^[a-zA-Z0-9 -]+:.*#'  Makefile | while read -r l; do printf "\033[1;32m$$(echo $$l | cut -f 1 -d':')\033[00m:$$(echo $$l | cut -f 2- -d'#')\n"; done
+	@grep -E '^[a-zA-Z0-9 -]+:.*#' Makefile | while read -r l; do \
+		printf "\033[1;32m$$(echo $$l | cut -f 1 -d':')\033[00m:$$(echo $$l | cut -f 2- -d'#')\n"; \
+		done
 
 apidocs:  # Creates API documentation for RTDs
 	@sphinx-apidoc -f -o docs cruds/

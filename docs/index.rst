@@ -7,7 +7,7 @@
 "Create, Read, Update, Delete"s
 ===============================
 
-Release v\ |version|.
+Release v\ |version|
 
 .. image:: https://img.shields.io/pypi/pyversions/cruds?logo=python&logoColor=FFE873
     :target: https://pypi.org/project/cruds/
@@ -21,7 +21,7 @@ Release v\ |version|.
     :target: https://github.com/johnbrandborg/cruds/blob/main/LICENSE
     :alt: License Badge
 
-**CRUDs** is a high level client library for API's written in Python, and is ideal for back-end
+**CRUDs** is a high level client library for APIs written in Python, and is ideal for back-end
 communication, automated data processing and interactive environments like Notebooks.
 
 --------------------
@@ -58,11 +58,11 @@ By using this package, developers can focus more on working with data rather tha
 What CRUDs is not:
  - A low-level client library that requires extensive coding for common requirements and production readiness.
  - A high-level client library designed for accessing websites and front-ends, which may contain unnecessary functionality for API usage. (Additional packages may still be required for common functionality)
- - A client library that should be used for API's that do not follow CRUD operation designs.
+ - A client library that should be used for APIs that do not follow CRUD operation designs.
 
 What CRUDs is:
- - A high-level client library specifically designed for API's that implement CRUD operations.
- - A self-contained package that facilitates communication with API's.
+ - A high-level client library specifically designed for APIs that implement CRUD operations.
+ - A self-contained package that facilitates communication with APIs.
  - Utilizes low-level libraries with minimal overhead.
  - Follows best practices of low-level libraries and protocols to ensure reliability.
 
@@ -79,6 +79,7 @@ and examples of way to use it to move data.
 
    user_guide
    interfaces
+   examples
    changelog
    development
    license
