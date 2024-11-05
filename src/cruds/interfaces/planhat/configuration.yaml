@@ -20,6 +20,7 @@ api:
       - calls_per_min
       - bulk_upsert_response_check
       - tenant_token
+      - _sum_bulk_upsert_responses
 
     default_model_methods:
       - create

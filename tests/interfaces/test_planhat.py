@@ -12,7 +12,7 @@ import pytest
 from cruds import Client
 from cruds.interfaces.planhat import Planhat
 from cruds.interfaces.planhat.logic import *
-from cruds.interfaces.planhat.logic import _get_all_data
+from cruds.interfaces.planhat.logic import _get_all_data, _sum_bulk_upsert_responses
 
 
 TEST_API_TOKEN = "9PhAfMO3WllHUmmhJA4eO3tJPhDck1aKLvQ5osvNUfKYdJ7H"
@@ -94,6 +94,7 @@ def planhat_model():
     class Model:
         __init__ = model_init
         _get_all_data = _get_all_data
+        _sum_bulk_upsert_responses = _sum_bulk_upsert_responses
         bulk_insert_metrics = bulk_insert_metrics
         bulk_upsert = bulk_upsert
         create = create
@@ -108,7 +109,7 @@ def planhat_model():
         segment = segment
 
     model = Model(Mock(), "planhat_model_uri")
-    model._owner.bulk_upsert_response = []
+    model._owner._bulk_upsert_response = []
     model._owner._delay = 0
     model._owner.tenant_token = TEST_TENANT_TOKEN
 
@@ -156,7 +157,7 @@ def test_Planhat_bulk_upsert_response_check_empty(planhat):
     Check to see if the init holds the company_id, tenant_token and delay
     """
 
-    assert planhat.bulk_upsert_response == []
+    assert planhat._bulk_upsert_response == {}
     assert planhat.bulk_upsert_response_check() is None
 
 
@@ -165,20 +166,19 @@ def test_Planhat_bulk_upsert_response_check_no_errors(planhat):
     Check to see if the init holds the company_id, tenant_token and delay
     """
 
-    planhat.bulk_upsert_response = [
-        {
-            "created": 0,
-            "createdErrors": [],
-            "insertsKeys": [],
-            "updated": 0,
-            "updatedErrors": [],
-            "updatesKeys": [],
-            "nonupdates": 0,
-            "modified": [],
-            "upsertedIds": [],
-            "permissionErrors": [],
-        }
-    ]
+    planhat._bulk_upsert_response = {
+        "created": 0,
+        "createdErrors": [],
+        "insertsKeys": [],
+        "updated": 0,
+        "updatedErrors": [],
+        "updatesKeys": [],
+        "nonupdates": 0,
+        "modified": [],
+        "upsertedIds": [],
+        "permissionErrors": [],
+    }
+
     assert planhat.bulk_upsert_response_check() is None
 
 
@@ -187,20 +187,19 @@ def test_Planhat_bulk_upsert_response_check_with_errors(planhat):
     Check to see if the init holds the company_id, tenant_token and delay
     """
 
-    planhat.bulk_upsert_response = [
-        {
-            "created": 0,
-            "createdErrors": ["email duplicated"],
-            "insertsKeys": [],
-            "updated": 0,
-            "updatedErrors": ["invalid id"],
-            "updatesKeys": [],
-            "nonupdates": 0,
-            "modified": [],
-            "upsertedIds": [],
-            "permissionErrors": [],
-        }
-    ]
+    planhat._bulk_upsert_response = {
+        "created": 0,
+        "createdErrors": ["email duplicated"],
+        "insertsKeys": [],
+        "updated": 0,
+        "updatedErrors": ["invalid id"],
+        "updatesKeys": [],
+        "nonupdates": 0,
+        "modified": [],
+        "upsertedIds": [],
+        "permissionErrors": [],
+    }
+
     with pytest.raises(PlanhatUpsertError) as excinfo:
         planhat.bulk_upsert_response_check()
 
@@ -239,32 +238,6 @@ def test_Model_create(planhat_model):
     )
 
 
-def test_Model_bulk_upsert_with_patch(planhat_model):
-    """
-    Test the bulk upsert can use patch
-    """
-    bulk_upsert_sample = [{"_id": "1"}]
-
-    planhat_model.bulk_upsert(
-        bulk_upsert_sample,
-        with_post=False,
-    )
-    planhat_model._owner.client.update.assert_called()
-
-
-def test_Model_bulk_upsert_with_post(planhat_model):
-    """
-    Test the bulk upsert can use post
-    """
-    bulk_upsert_sample = [{"_id": "1"}]
-
-    planhat_model.bulk_upsert(
-        bulk_upsert_sample,
-        with_post=True,
-    )
-    planhat_model._owner.client.create.assert_called()
-
-
 def test_Model_bulk_upsert_results(planhat_model):
     """
     Test the bulk upsert iterates over data and returns results
@@ -275,23 +248,29 @@ def test_Model_bulk_upsert_results(planhat_model):
         {"_id": "1"},
     ]
 
-    def response(self, data, replace):
-        assert replace
-        return [d.get("_id", "") for d in data]
+    def mock_update(uri, data, replace) -> dict:
+        assert replace is True
+        return {
+            "created": 0,
+            "updated": len(data),
+            "updatedKeys": data,
+        }
 
-    planhat_model._owner.client.update = response
+    planhat_model._owner.client.update = Mock(side_effect=mock_update)
 
-    # Run twice to ensure results are cleared each time
-    planhat_model.bulk_upsert(bulk_upsert_sample)
-    results = planhat_model.bulk_upsert(
-        bulk_upsert_sample,
-        chunk_size=1,
+    results = planhat_model.bulk_upsert(bulk_upsert_sample)
+    planhat_model._owner.client.update.assert_called_with(
+        "planhat_model_uri", bulk_upsert_sample, replace=True
     )
 
-    expected_results = [["2"], ["3"], ["1"]]
+    expected_results = {
+        "created": 0,
+        "updated": 3,
+        "updatedKeys": bulk_upsert_sample,
+    }
 
-    assert results == expected_results
-    assert planhat_model._owner.bulk_upsert_response == expected_results
+    for key in results:
+        assert results[key] == expected_results[key]
 
 
 def test_Model_bulk_upsert_chunksize_two(planhat_model):
@@ -306,6 +285,15 @@ def test_Model_bulk_upsert_chunksize_two(planhat_model):
         {"_id": "4"},
         {"_id": "5"},
     ]
+
+    def mock_update(uri, data, replace) -> dict:
+        assert replace is True
+        return {
+            "updated": len(data),
+            "updatedKeys": data,
+        }
+
+    planhat_model._owner.client.update = Mock(side_effect=mock_update)
 
     planhat_model.bulk_upsert(
         bulk_upsert_sample,
@@ -601,10 +589,9 @@ def test_Model_bulk_insert_metrics(planhat_model):
     planhat_model._owner.tenant_token = TEST_TENANT_TOKEN
     planhat_model.bulk_insert_metrics(bulk_sample)
 
-    planhat_model._owner.client_analytics.update.assert_called_with(
+    planhat_model._owner.client_analytics.create.assert_called_with(
         f"planhat_model_uri/{TEST_TENANT_TOKEN}",
         bulk_sample,
-        with_post=True,
     )
 
 

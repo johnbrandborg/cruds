@@ -1,6 +1,5 @@
 from copy import deepcopy
 from datetime import datetime
-from functools import partial
 from logging import getLogger
 from time import sleep
 from typing import Any, Dict, Generator, List, Union
@@ -23,8 +22,8 @@ def __init__(
 ) -> None:
     self.client = Client(host=PLANHAT_API_HOST, auth=api_token, **kwargs)
     self.tenant_token = tenant_token
-    self.bulk_upsert_response = []
     self.calls_per_min = calls_per_min
+    self._bulk_upsert_response = {}
 
 
 @property
@@ -67,20 +66,33 @@ def bulk_upsert_response_check(self) -> None:
     """
     Checks the response returned by Bulk Upserts, and raises an exception if one is found.
     """
-    if not self.bulk_upsert_response:
+    if not self._bulk_upsert_response:
         logger.info("Bulk Upsert response is empty.")
         return
 
-    for results in self.bulk_upsert_response:
-        for error in (
-            {"type": key, "count": len(value)}
-            for key, value in results.items()
-            if "Errors" in key and isinstance(value, list)
-        ):
-            if error["count"]:
-                raise PlanhatUpsertError(f"Errors found: {results[error['type']]}")
+    for error in (
+        {"type": key, "count": len(value)}
+        for key, value in self._bulk_upsert_response.items()
+        if "Errors" in key and isinstance(value, list)
+    ):
+        if error["count"]:
+            raise PlanhatUpsertError(
+                f"Errors found: {self._bulk_upsert_response[error['type']]}"
+            )
 
-            logger.info(f"{error['type']} check passed.")
+        logger.info(f"{error['type']} check passed.")
+
+
+def _sum_bulk_upsert_responses(self, total: dict, response: dict) -> None:
+    """
+    Takes two Dictionaries and sums or extends the values in the response into the
+    total using common keys.  Only the first level is processed.
+    """
+    for key in response:
+        if key in total and isinstance(response[key], (tuple, list, int, float)):
+            total[key] = total[key] + response[key]
+        else:
+            total[key] = response[key]
 
 
 # Model Methods
@@ -106,8 +118,7 @@ def bulk_upsert(
     self,
     data: Dict[Any, Any],
     chunk_size=5000,
-    with_post=False,
-) -> List[Dict[str, Union[int, List[str]]]]:
+) -> Dict[str, Union[int, List[str]]]:
     """
     Takes data in form of JSON and updates entries already in PlanHat.
     (Limit of 5,000 items per request)
@@ -116,22 +127,22 @@ def bulk_upsert(
     To update an asset it is required to specify in the payload one of the
     following keyables: _id, sourceId and/or externalId.
     """
-    self._owner.bulk_upsert_response.clear()
-    operation = (
-        self._owner.client.create
-        if with_post
-        else partial(self._owner.client.update, replace=True)
-    )
+    self._bulk_upsert_response = {}
 
     for reference in range(0, len(data), chunk_size):
         next_reference: int = reference + chunk_size
-        self._owner.bulk_upsert_response.append(
-            operation(self._uri, data[reference:next_reference])
+        self._sum_bulk_upsert_responses(
+            self._bulk_upsert_response,
+            self._owner.client.update(
+                self._uri,
+                data[reference:next_reference],
+                replace=True,
+            ),
         )
         logger.info(f"  -> Bulk Records Delivered: {reference} - {next_reference - 1}")
         sleep(self._owner._delay)
 
-    return self._owner.bulk_upsert_response
+    return self._bulk_upsert_response
 
 
 def delete(self, identification: str) -> dict:
@@ -288,8 +299,8 @@ def bulk_insert_metrics(self, data: dict) -> dict:
     the request URL. This token is a simple uui identifier for your tenant and it can be found in
     the Developer module under the Tokens section.
     """
-    return self._owner.client_analytics.update(
-        f"{self._uri}/{self._owner.tenant_token}", data, with_post=True
+    return self._owner.client_analytics.create(
+        f"{self._uri}/{self._owner.tenant_token}", data
     )
 
 

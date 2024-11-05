@@ -1,14 +1,23 @@
 Changelog
 =========
 
+Release 1.3.7 (November 5, 2024)
+--------------------------------
+
+Features:
+ - Planhat Bulk Upsert response is now a single dictionary instead of a list of
+   dictionaries.  The values of all response are summaries or extended together.
+
+Fixes:
+ - Correct the method used by bulk_insert_metrics.
 
 Release 1.3.6 (November 4, 2024)
 --------------------------------
 
 Fixes:
+ - Allow Any data type to be serialized and deserialized to JSON.
  - Corrected the Planhat Metric model to correctly use bulk_insert_metrics.
- - Allow Any data type to be serialized.
- - Planhat Bulkupsert required replace argument to be set to True.
+ - Planhat bulk_upsert method required replace argument to be set to True.
 
 Release 1.3.3 (October 21, 2024)
 --------------------------------
