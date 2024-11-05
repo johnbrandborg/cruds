@@ -131,7 +131,7 @@ def bulk_upsert(
 
     for reference in range(0, len(data), chunk_size):
         next_reference: int = reference + chunk_size
-        self._sum_bulk_upsert_responses(
+        self._owner._sum_bulk_upsert_responses(
             self._bulk_upsert_response,
             self._owner.client.update(
                 self._uri,

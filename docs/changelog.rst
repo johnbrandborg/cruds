@@ -1,7 +1,7 @@
 Changelog
 =========
 
-Release 1.3.7 (November 5, 2024)
+Release 1.3.8 (November 5, 2024)
 --------------------------------
 
 Features:
@@ -9,7 +9,7 @@ Features:
    dictionaries.  The values of all response are summaries or extended together.
 
 Fixes:
- - Correct the method used by bulk_insert_metrics.
+ - Correct the method used by the Planhat interfaces bulk_insert_metrics.
 
 Release 1.3.6 (November 4, 2024)
 --------------------------------
