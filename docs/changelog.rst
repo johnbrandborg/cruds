@@ -1,6 +1,12 @@
 Changelog
 =========
 
+Release 1.3.9 (November 7, 2024)
+--------------------------------
+
+Features:
+ - Planhat Create Activity bulk mode to upload multiple entries in one request.
+
 Release 1.3.8 (November 5, 2024)
 --------------------------------
 

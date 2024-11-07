@@ -230,6 +230,14 @@ api:
         uri: onjectives
 
       - name: user_activity
+        docstring: |
+          Keeping track of your endusers activity is an important part of the Customer Success
+          effort.  The most obvious events are probably logins and page-views. Logins tend to be
+          fairly inaccurate since it depends a lot on user behavior, some people login and logout
+          a lot, others keep their sessions open. Page views is likely a better metric. Even though
+          page views have relatively weak correlation with the value created, it does give you a
+          general sense of activity level, and it’s great to understand when a given user/customer
+          was last active.
         methods:
           - create_activity
           - segment

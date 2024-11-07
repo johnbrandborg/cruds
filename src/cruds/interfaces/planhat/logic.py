@@ -83,7 +83,8 @@ def bulk_upsert_response_check(self) -> None:
         logger.info(f"{error['type']} check passed.")
 
 
-def _sum_bulk_upsert_responses(self, total: dict, response: dict) -> None:
+@staticmethod
+def _sum_bulk_upsert_responses(total: dict, response: dict) -> None:
     """
     Takes two Dictionaries and sums or extends the values in the response into the
     total using common keys.  Only the first level is processed.
@@ -103,7 +104,7 @@ def model_init(self, owner, uri) -> None:
     self._uri = uri
 
 
-def create(self, data: dict) -> dict:
+def create(self, data: Any) -> dict:
     """
     To create an entry it's required define a name and a valid companyId.
 
@@ -116,7 +117,7 @@ def create(self, data: dict) -> dict:
 
 def bulk_upsert(
     self,
-    data: Dict[Any, Any],
+    data: list,
     chunk_size=5000,
 ) -> Dict[str, Union[int, List[str]]]:
     """
@@ -152,7 +153,7 @@ def delete(self, identification: str) -> dict:
     return self._owner.client.delete(f"{self._uri}/{identification}")
 
 
-def update(self, identification: str, data: dict) -> dict:
+def update(self, identification: str, data: Any) -> dict:
     """
     Updates an entry by PlanID, ExternalID or SourceID by prepending the
     id with either extid- or srcid-.
@@ -293,31 +294,40 @@ def _get_all_data(self, uri, params, max_requests) -> Generator:
 ## User Activity - Analytics Endpoint
 
 
-def bulk_insert_metrics(self, data: dict) -> dict:
+def bulk_insert_metrics(self, data: Any) -> dict:
     """
-    To push dimension data into Planhat it is required to specify the Tenant Token (tenantUUID) in
-    the request URL. This token is a simple uui identifier for your tenant and it can be found in
-    the Developer module under the Tokens section.
+    To push dimension data into Planhat it is required to specify the Tenant Token
+    (tenantUUID) in the request URL. This token is a simple uui identifier for your
+    tenant and it can be found in the Developer module under the Tokens section.
     """
     return self._owner.client_analytics.create(
         f"{self._uri}/{self._owner.tenant_token}", data
     )
 
 
-def create_activity(self, data: dict) -> Union[Dict[Any, Any], bytes]:
+def create_activity(self, data: Any, bulk=False) -> Union[Dict[Any, Any], bytes]:
     """
     Creates user activity.  Required data keys are email or externalId.
     Ensure you create the PlanHat instance with analytics set to True.
 
     To use this method you don't need an API auth token.  Just supply the
     tenant_token instead.
+
+        Parameters:
+                data (dict): Data to be serialed and deliveryed
+                bulk (bool): Use the bulk request rather than realtime
+
+        Returns:
+                data (dict|bytes): Deserialed or byte data
     """
+    bulk_path: str = "/bulk" if bulk is True else ""
+
     return self._owner.client_analytics.create(
-        f"{self._uri}/{self._owner.tenant_token}", data
+        f"{self._uri}{bulk_path}/{self._owner.tenant_token}", data
     )
 
 
-def segment(self, data: dict) -> Union[Dict[Any, Any], bytes]:
+def segment(self, data) -> Union[Dict[Any, Any], bytes]:
     """
     Segment can be used to send User Events (user tracking data) to Planhat.
     Required data keys are type, and trait.  trait is an object.

@@ -238,6 +238,18 @@ def test_Model_create(planhat_model):
     )
 
 
+def test__sum_bulk_upsert_response(planhat_model):
+    """
+    Test that the new responses are summarized into the result
+    """
+    result = {}
+    planhat_model._sum_bulk_upsert_responses(result, {"A": 3, "B": [1]})
+    assert result == {"A": 3, "B": [1]}
+
+    planhat_model._sum_bulk_upsert_responses(result, {"A": 8, "B": [3]})
+    assert result == {"A": 11, "B": [1, 3]}
+
+
 def test_Model_bulk_upsert_results(planhat_model):
     """
     Test the bulk upsert iterates over data and returns results
@@ -617,6 +629,31 @@ def test_Model_create_activity(planhat_model):
 
     planhat_model._owner.client_analytics.create.assert_called_with(
         f"planhat_model_uri/{TEST_TENANT_TOKEN}", create_sample
+    )
+
+
+def test_Model_create_activity_bulk(planhat_model):
+    """
+    Test the create activity request to planhat
+    """
+
+    create_sample = json.loads("""\
+    {
+        "email": "ivars@planhat.com",
+        "action": "Logged in",
+        "externalId": "ojpsoi57pzn",
+        "companyExternalId": "Planhat-81ock9l81wl",
+        "weight": 1,
+        "info": {
+            "index": 30,
+            "theme": "Blue"
+        }
+    }
+    """)
+    planhat_model.create_activity(data=create_sample, bulk=True)
+
+    planhat_model._owner.client_analytics.create.assert_called_with(
+        f"planhat_model_uri/bulk/{TEST_TENANT_TOKEN}", create_sample
     )
 
 
