@@ -5,14 +5,33 @@ Tests for Planhat interface logic in CRUDs
 from collections.abc import Generator
 from copy import deepcopy
 import json
+from typing import Any
 from unittest.mock import MagicMock, Mock
+from unittest import mock
 
 import pytest
 
 from cruds import Client
 from cruds.interfaces.planhat import Planhat
-from cruds.interfaces.planhat.logic import *
-from cruds.interfaces.planhat.logic import _get_all_data, _sum_bulk_upsert_responses
+from cruds.interfaces.planhat.logic import (
+    _get_all_data,
+    _sum_bulk_upsert_responses,
+    bulk_insert_metrics,
+    bulk_upsert,
+    calculate_metric_chunk_size,
+    create,
+    create_activity,
+    delete,
+    epoc_days_format,
+    get_by_id,
+    get_dimension_data,
+    get_lean_list,
+    get_list,
+    model_init,
+    segment,
+    update,
+)
+from cruds.interfaces.planhat.exception import PlanhatUpsertError
 
 
 TEST_API_TOKEN = "9PhAfMO3WllHUmmhJA4eO3tJPhDck1aKLvQ5osvNUfKYdJ7H"
@@ -677,3 +696,97 @@ def test_Model_segment(planhat_model):
     planhat_model._owner.client_analytics.create.assert_called_with(
         "dock/segment", create_sample
     )
+
+
+def test_bulk_insert_metrics_chunking(planhat_model):
+    """
+    Should chunk data and call create multiple times.
+    """
+    data = [{"a": i} for i in range(10)]
+    planhat_model._owner.client_analytics.create = MagicMock(return_value={"ok": True})
+    # Patch chunk size to 2 for predictable chunking
+    with mock.patch(
+        "cruds.interfaces.planhat.logic.calculate_metric_chunk_size", return_value=2
+    ):
+        result = planhat_model.bulk_insert_metrics(data, auto_chunk=True)
+    assert planhat_model._owner.client_analytics.create.call_count == 5
+    assert result == {}
+
+
+def test_bulk_insert_metrics_no_chunking(planhat_model):
+    """
+    Should call create once if not a list or auto_chunk is False.
+    """
+    planhat_model._owner.client_analytics.create = MagicMock(return_value={"ok": True})
+    planhat_model.bulk_insert_metrics({"a": 1}, auto_chunk=True)
+    assert planhat_model._owner.client_analytics.create.call_count == 1
+    planhat_model.bulk_insert_metrics([], auto_chunk=True)
+    assert planhat_model._owner.client_analytics.create.call_count == 2
+    planhat_model.bulk_insert_metrics([{"a": 1}], auto_chunk=False)
+    assert planhat_model._owner.client_analytics.create.call_count == 3
+
+
+def test_calculate_metric_chunk_size_edge_cases():
+    """
+    Should handle non-list, empty list, and sample logic.
+    """
+    assert calculate_metric_chunk_size({"a": 1}) == 1
+    assert calculate_metric_chunk_size([]) == 0
+    # For a list, should return >0
+    data = [{"a": i} for i in range(100)]
+    size = calculate_metric_chunk_size(data, sample_per=10)
+    assert size > 0
+
+
+def test_create_activity_bulk_chunking(planhat_model):
+    """
+    Should chunk and call create multiple times for bulk activity.
+    """
+    data = [{"a": i} for i in range(10)]
+    planhat_model._owner.client_analytics.create = MagicMock(return_value={"ok": True})
+    with mock.patch(
+        "cruds.interfaces.planhat.logic.calculate_metric_chunk_size", return_value=2
+    ):
+        result = planhat_model.create_activity(data, bulk=True, auto_chunk=True)
+    assert planhat_model._owner.client_analytics.create.call_count == 5
+    assert result == {}
+
+
+def test_create_activity_no_chunking(planhat_model):
+    """
+    Should call create once if not bulk or not a list.
+    """
+    planhat_model._owner.client_analytics.create = MagicMock(return_value={"ok": True})
+    planhat_model.create_activity({"a": 1}, bulk=False, auto_chunk=True)
+    assert planhat_model._owner.client_analytics.create.call_count == 1
+    planhat_model.create_activity([], bulk=True, auto_chunk=True)
+    assert planhat_model._owner.client_analytics.create.call_count == 2
+    planhat_model.create_activity([{"a": 1}], bulk=True, auto_chunk=False)
+    assert planhat_model._owner.client_analytics.create.call_count == 3
+
+
+def test_segment_chunking(planhat_model):
+    """
+    Should chunk and call create multiple times for segment.
+    """
+    data = [{"a": i} for i in range(10)]
+    planhat_model._owner.client_analytics.create = MagicMock(return_value={"ok": True})
+    with mock.patch(
+        "cruds.interfaces.planhat.logic.calculate_metric_chunk_size", return_value=2
+    ):
+        result = planhat_model.segment(data, auto_chunk=True)
+    assert planhat_model._owner.client_analytics.create.call_count == 5
+    assert result == {}
+
+
+def test_segment_no_chunking(planhat_model):
+    """
+    Should call create once if not a list or auto_chunk is False.
+    """
+    planhat_model._owner.client_analytics.create = MagicMock(return_value={"ok": True})
+    planhat_model.segment({"a": 1}, auto_chunk=True)
+    assert planhat_model._owner.client_analytics.create.call_count == 1
+    planhat_model.segment([], auto_chunk=True)
+    assert planhat_model._owner.client_analytics.create.call_count == 2
+    planhat_model.segment([{"a": 1}], auto_chunk=False)
+    assert planhat_model._owner.client_analytics.create.call_count == 3

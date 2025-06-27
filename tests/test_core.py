@@ -50,10 +50,20 @@ def test_Client_use_supplied_urllib3_manager():
 def test_Client_disable_retries():
     """Setting the retries to 0 or None will disable retries being used"""
     api = cruds.Client(host="https://localhost", retries=0)
-    assert api.manager.connection_pool_kw.get("retries") == 0
+    retries = api.manager.connection_pool_kw.get("retries")
+    assert retries.total is False
+    assert retries.connect is None
+    assert retries.read is None
+    assert retries.redirect == 0
+    assert retries.status is None
 
-    cruds.Client(host="https://localhost", retries=None)
-    assert api.manager.connection_pool_kw.get("retries") == 0
+    api = cruds.Client(host="https://localhost", retries=None)
+    retries = api.manager.connection_pool_kw.get("retries")
+    assert retries.total is False
+    assert retries.connect is None
+    assert retries.read is None
+    assert retries.redirect == 0
+    assert retries.status is None
 
 
 @pytest.fixture

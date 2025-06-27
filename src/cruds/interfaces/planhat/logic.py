@@ -294,18 +294,86 @@ def _get_all_data(self, uri, params, max_requests) -> Generator:
 ## User Activity - Analytics Endpoint
 
 
-def bulk_insert_metrics(self, data: Any) -> dict:
+def bulk_insert_metrics(self, data: Any, auto_chunk=True) -> dict:
     """
     To push dimension data into Planhat it is required to specify the Tenant Token
     (tenantUUID) in the request URL. This token is a simple uui identifier for your
     tenant and it can be found in the Developer module under the Tokens section.
     """
+    if auto_chunk is True and isinstance(data, list) and len(data) > 0:
+        self._bulk_upsert_response = {}
+        chunk_size: int = calculate_metric_chunk_size(data)
+
+        for reference in range(0, len(data), chunk_size):
+            next_reference: int = reference + chunk_size
+            self._owner._sum_bulk_upsert_responses(
+                self._bulk_upsert_response,
+                self._owner.client_analytics.create(
+                    f"{self._uri}/{self._owner.tenant_token}",
+                    data[reference:next_reference],
+                ),
+            )
+            logger.info(
+                f"  -> Bulk Metrics Delivered: {reference} - {next_reference - 1}"
+            )
+            sleep(3)
+
+        return self._bulk_upsert_response
+
     return self._owner.client_analytics.create(
         f"{self._uri}/{self._owner.tenant_token}", data
     )
 
 
-def create_activity(self, data: Any, bulk=False) -> Union[Dict[Any, Any], bytes]:
+def calculate_metric_chunk_size(
+    data: list, sample_per=1000, max_bytes=32 * (1024**2), reduction=10
+) -> int:
+    """
+    Determines the chunk size of a list of JSON objects to be sent to an API,
+    based on the maximum size in bytes that API can recieve.  A reduction percentage
+    is applied to avoid the random sampling calculating to many rows.
+
+    Reducing the sample per number of JSON objects increases the accuracy.
+    """
+    from random import randint
+    from statistics import mean
+    from json import dumps
+
+    logger.info("Calculating chunk size of metric data")
+
+    # Handle case where data is not a list (e.g., single dictionary)
+    if not isinstance(data, list):
+        # For single items, return 1 as chunk size
+        return 1
+
+    if len(data) > 0:
+        sample_count: int = int(max(round(len(data)) / sample_per, 1))
+    else:
+        return 0
+
+    sample_positions = set()
+
+    while len(sample_positions) < sample_count:
+        sample_positions.add(randint(0, len(data) - 1))
+
+    average_size: int = round(
+        mean([len(dumps(data[pos]).encode()) for pos in sample_positions])
+    )
+
+    chunk_size: int = round((max_bytes * (1 - reduction / 100)) / average_size)
+    logger.info(
+        "Average: %d bytes, Size: %d rows, Bytes (%d%% Reduction)",
+        average_size,
+        chunk_size,
+        reduction,
+    )
+
+    return chunk_size
+
+
+def create_activity(
+    self, data: Any, bulk=False, auto_chunk=True
+) -> Union[Dict[Any, Any], bytes]:
     """
     Creates user activity.  Required data keys are email or externalId.
     Ensure you create the PlanHat instance with analytics set to True.
@@ -314,27 +382,78 @@ def create_activity(self, data: Any, bulk=False) -> Union[Dict[Any, Any], bytes]
     tenant_token instead.
 
         Parameters:
-                data (dict): Data to be serialed and deliveryed
+                data (dict|list): Data to be serialed and deliveryed
                 bulk (bool): Use the bulk request rather than realtime
+                auto_chunk (bool): Automatically chunk data to avoid 32MB limit
 
         Returns:
                 data (dict|bytes): Deserialed or byte data
     """
     bulk_path: str = "/bulk" if bulk is True else ""
 
+    # Only apply auto-chunking for bulk operations with list data
+    if bulk and auto_chunk and isinstance(data, list) and len(data) > 0:
+        self._bulk_upsert_response = {}
+        chunk_size: int = calculate_metric_chunk_size(data)
+
+        for reference in range(0, len(data), chunk_size):
+            next_reference: int = reference + chunk_size
+            self._owner._sum_bulk_upsert_responses(
+                self._bulk_upsert_response,
+                self._owner.client_analytics.create(
+                    f"{self._uri}{bulk_path}/{self._owner.tenant_token}",
+                    data[reference:next_reference],
+                ),
+            )
+            logger.info(
+                f"  -> Bulk Activity Delivered: {reference} - {next_reference - 1}"
+            )
+            sleep(3)
+
+        return self._bulk_upsert_response
+
     return self._owner.client_analytics.create(
         f"{self._uri}{bulk_path}/{self._owner.tenant_token}", data
     )
 
 
-def segment(self, data) -> Union[Dict[Any, Any], bytes]:
+def segment(self, data, auto_chunk=True) -> Union[Dict[Any, Any], bytes]:
     """
     Segment can be used to send User Events (user tracking data) to Planhat.
     Required data keys are type, and trait.  trait is an object.
 
     To use this method you must use the tenant token as the auth parameter
     for the instance creation.
+
+        Parameters:
+                data (dict|list): Data to be serialized and delivered
+                auto_chunk (bool): Automatically chunk data to avoid 32MB limit
+
+        Returns:
+                data (dict|bytes): Deserialized or byte data
     """
     # Retrieve tenant_token even though not used, to ensure client is created.
     self._owner.tenant_token
+
+    # Apply auto-chunking for list data
+    if auto_chunk and isinstance(data, list) and len(data) > 0:
+        self._bulk_upsert_response = {}
+        chunk_size: int = calculate_metric_chunk_size(data)
+
+        for reference in range(0, len(data), chunk_size):
+            next_reference: int = reference + chunk_size
+            self._owner._sum_bulk_upsert_responses(
+                self._bulk_upsert_response,
+                self._owner.client_analytics.create(
+                    "dock/segment",
+                    data[reference:next_reference],
+                ),
+            )
+            logger.info(
+                f"  -> Bulk Segment Delivered: {reference} - {next_reference - 1}"
+            )
+            sleep(3)
+
+        return self._bulk_upsert_response
+
     return self._owner.client_analytics.create("dock/segment", data)

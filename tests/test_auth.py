@@ -5,10 +5,13 @@ Tests for Auth components in CRUDs
 import json
 from time import time
 from unittest import mock
+import pytest
 
 from urllib3.response import HTTPResponse
 
 from cruds.auth import OAuth2
+from cruds.exception import OAuthAccessTokenError
+import urllib3
 
 access_token: str = "MTQ0NjJkZmQ5OTM2NDE1ZTZjNGZmZjI3"
 refresh_token: str = "IwOGYzYTlmM2YxOTQ5MGE3YmNmMDFkNTVk"
@@ -184,3 +187,109 @@ def test_OAuth2_access_token_refresh():
         },
         redirect=False,
     )
+
+
+def test_OAuth2_access_token_400_error():
+    """
+    Should raise OAuthAccessTokenError for 400-499 response.
+    """
+    auth = OAuth2(
+        url="https://localhost/token",
+        client_id="123",
+        client_secret="ABC",
+        scope="api",
+    )
+    mock_resp = HTTPResponse(b'{"error_description": "Bad Request"}', status=400)
+    mock_resp.json = lambda: {"error_description": "Bad Request"}
+    with mock.patch("urllib3.request", return_value=mock_resp):
+        with pytest.raises(OAuthAccessTokenError):
+            auth.access_token()
+
+
+def test_OAuth2_access_token_non_2xx_error():
+    """
+    Should raise HTTPError for non-2xx, non-400-499 response.
+    """
+    auth = OAuth2(
+        url="https://localhost/token",
+        client_id="123",
+        client_secret="ABC",
+        scope="api",
+    )
+    mock_resp = HTTPResponse(b"Internal Error", status=500)
+    mock_resp.json = lambda: {}
+    with mock.patch("urllib3.request", return_value=mock_resp):
+        with pytest.raises(urllib3.exceptions.HTTPError):
+            auth.access_token()
+
+
+def test_OAuth2_access_token_with_authorization_details_list():
+    """
+    Should handle authorization_details as a list.
+    """
+    auth = OAuth2(
+        url="https://localhost/token",
+        client_id="123",
+        client_secret="ABC",
+        scope="api",
+        authorization_details=[{"type": "test"}],
+    )
+    mock_resp = HTTPResponse(access_token_response, status=200)
+    with mock.patch("urllib3.request", return_value=mock_resp) as mock_request:
+        token = auth.access_token()
+    assert token == access_token
+    assert "authorization_details" in mock_request.call_args[1]["body"]
+
+
+def test_OAuth2_access_token_with_authorization_details_str():
+    """
+    Should handle authorization_details as a string.
+    """
+    auth = OAuth2(
+        url="https://localhost/token",
+        client_id="123",
+        client_secret="ABC",
+        scope="api",
+        authorization_details="test-string",
+    )
+    mock_resp = HTTPResponse(access_token_response, status=200)
+    with mock.patch("urllib3.request", return_value=mock_resp) as mock_request:
+        token = auth.access_token()
+    assert token == access_token
+    assert "authorization_details" in mock_request.call_args[1]["body"]
+
+
+def test_OAuth2_is_valid_missing_access_token():
+    """
+    Should raise RuntimeError if access_token or token_type is missing.
+    """
+    auth = OAuth2(
+        url="https://localhost/token",
+        client_id="123",
+        client_secret="ABC",
+        scope="api",
+    )
+    auth._state = {"token_type": "Bearer"}
+    with pytest.raises(RuntimeError):
+        auth.is_valid()
+    auth._state = {"access_token": "foo", "token_type": "NotBearer"}
+    with pytest.raises(RuntimeError):
+        auth.is_valid()
+
+
+def test_OAuth2_is_valid_no_expires_in():
+    """
+    Should return True if no expires_in in state.
+    """
+    auth = OAuth2(
+        url="https://localhost/token",
+        client_id="123",
+        client_secret="ABC",
+        scope="api",
+    )
+    auth._state = {
+        "access_token": "foo",
+        "token_type": "Bearer",
+        "created": int(time()),
+    }
+    assert auth.is_valid() is True
