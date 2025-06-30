@@ -41,10 +41,10 @@ Features:
  - Authentication: Username & Password, Bearer Token and OAuth2
  - JSON Serialization/Deserialization
  - Request parameters and automatically URL encoded
- - Default connection timeout (5 minutes)
- - Raises exceptions on bad status codes
- - Retries with back-off
- - SSL Verification
+ - Configurable timeouts (default 5 minutes)
+ - Exceptions handling for bad status codes
+ - Built-in retry logic with exponential backoff
+ - SSL Certificate Verification
  - Logging for monitoring
  - Interfaces (SDK Creation)
 
