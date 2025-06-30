@@ -83,36 +83,63 @@ class OAuth2(AuthABC):
         self.state_length = state_length
 
         # Initialize encryption
-        self._fernet = self._initialize_encryption(encryption_key)
+        self._fernet: Optional[Fernet] = self._initialize_encryption(encryption_key)
         self._encrypted_state = b""
 
         # State parameter for CSRF protection
         self._pending_state: Optional[str] = None
 
-    def _initialize_encryption(self, encryption_key: Optional[str] = None) -> Fernet:
+    def _initialize_encryption(
+        self, encryption_key: Optional[str] = None
+    ) -> Optional[Fernet]:
         """
-        Initialize encryption using provided key or derive from client_secret.
+        Initialize encryption using provided key.
 
         Args:
-            encryption_key: Optional encryption key. If not provided, derived from client_secret.
+            encryption_key: Optional encryption key. If not provided, encryption will be
+                          handled dynamically with random salts.
 
         Returns:
-            Fernet cipher instance for encryption/decryption
+            Fernet cipher instance for encryption/decryption, or None if using dynamic encryption
         """
         if encryption_key:
             # Use provided key
             key = base64.urlsafe_b64encode(encryption_key.encode()[:32].ljust(32, b"0"))
+            return Fernet(key)
         else:
-            # Derive key from client_secret (fallback for backward compatibility)
-            salt = b"cruds_oauth_salt"  # Fixed salt for deterministic key derivation
-            kdf = PBKDF2HMAC(
-                algorithm=hashes.SHA256(),
-                length=32,
-                salt=salt,
-                iterations=100000,
-            )
-            key = base64.urlsafe_b64encode(kdf.derive(self.client_secret.encode()))
+            # For client_secret-based encryption, we use dynamic salts
+            # No single Fernet instance is created here
+            return None
 
+    def _generate_encryption_key(self, salt: bytes) -> bytes:
+        """
+        Generate encryption key from client_secret using the provided salt.
+
+        Args:
+            salt: The salt to use for key derivation
+
+        Returns:
+            Base64 encoded key for Fernet
+        """
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=100000,
+        )
+        return base64.urlsafe_b64encode(kdf.derive(self.client_secret.encode()))
+
+    def _create_fernet_with_salt(self, salt: bytes) -> Fernet:
+        """
+        Create a Fernet instance using the provided salt.
+
+        Args:
+            salt: The salt to use for key derivation
+
+        Returns:
+            Fernet cipher instance
+        """
+        key = self._generate_encryption_key(salt)
         return Fernet(key)
 
     def _generate_state_parameter(self) -> str:
@@ -305,26 +332,37 @@ class OAuth2(AuthABC):
 
     def _encrypt_state(self, state: Dict[str, Any]) -> bytes:
         """
-        Encrypt the state dictionary.
+        Encrypt the state dictionary with a random salt.
 
         Args:
             state: Dictionary containing token state
 
         Returns:
-            Encrypted bytes
+            Encrypted bytes with salt prefix (for dynamic encryption) or without (for fixed key)
         """
         if not state:
             return b""
 
         state_json = json.dumps(state)
-        return self._fernet.encrypt(state_json.encode("utf-8"))
+        state_bytes = state_json.encode("utf-8")
+
+        if self._fernet is not None:
+            # Use fixed encryption key
+            return self._fernet.encrypt(state_bytes)
+        else:
+            # Use dynamic encryption with random salt
+            salt = secrets.token_bytes(16)
+            fernet = self._create_fernet_with_salt(salt)
+            encrypted_data = fernet.encrypt(state_bytes)
+            # Return salt + encrypted data
+            return salt + encrypted_data
 
     def _decrypt_state(self, encrypted_data: bytes) -> Dict[str, Any]:
         """
-        Decrypt the state dictionary.
+        Decrypt the state dictionary using the stored salt.
 
         Args:
-            encrypted_data: Encrypted state data
+            encrypted_data: Encrypted state data with salt prefix (for dynamic encryption) or without (for fixed key)
 
         Returns:
             Decrypted state dictionary
@@ -333,8 +371,34 @@ class OAuth2(AuthABC):
             return {}
 
         try:
-            decrypted_data = self._fernet.decrypt(encrypted_data)
-            return json.loads(decrypted_data.decode("utf-8"))
+            if self._fernet is not None:
+                # Use fixed encryption key
+                decrypted_data = self._fernet.decrypt(encrypted_data)
+                return json.loads(decrypted_data.decode("utf-8"))
+            else:
+                # Use dynamic encryption with salt prefix
+                # Try to decrypt with old fixed salt first for backward compatibility
+                try:
+                    old_salt = b"cruds_oauth_salt"
+                    fernet = self._create_fernet_with_salt(old_salt)
+                    decrypted_data = fernet.decrypt(encrypted_data)
+                    return json.loads(decrypted_data.decode("utf-8"))
+                except Exception:
+                    # If old salt fails, try new format with salt prefix
+                    if len(encrypted_data) >= 16:
+                        # Extract salt (first 16 bytes) and encrypted data
+                        salt = encrypted_data[:16]
+                        actual_encrypted_data = encrypted_data[16:]
+
+                        # Create Fernet instance with the stored salt
+                        fernet = self._create_fernet_with_salt(salt)
+
+                        # Decrypt the data
+                        decrypted_data = fernet.decrypt(actual_encrypted_data)
+                        return json.loads(decrypted_data.decode("utf-8"))
+                    else:
+                        # Data too short, can't be valid
+                        raise ValueError("Encrypted data too short")
         except Exception as e:
             logger.warning(f"Failed to decrypt state: {e}")
             return {}

@@ -12,6 +12,10 @@ from urllib3.response import HTTPResponse
 from cruds.auth import OAuth2
 from cruds.exception import OAuthAccessTokenError, OAuthStateError
 import urllib3
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from base64 import urlsafe_b64encode
 
 access_token: str = "MTQ0NjJkZmQ5OTM2NDE1ZTZjNGZmZjI3"
 refresh_token: str = "IwOGYzYTlmM2YxOTQ5MGE3YmNmMDFkNTVk"
@@ -1257,8 +1261,6 @@ def test_OAuth2_access_token_returns_empty_string_on_invalid():
     mock_response.json.return_value = {"token_type": "Bearer", "expires_in": 60}
     mock_response.data = b"invalid response"
     with mock.patch("urllib3.request", return_value=mock_response):
-        import pytest
-
         with pytest.raises(
             RuntimeError, match="Auth state is missing critical information"
         ):
@@ -1362,3 +1364,213 @@ def test_OAuth2_authorization_details_empty_list():
     auth_url = auth.get_authorization_url()
     # Should be URL-encoded []
     assert "authorization_details=%5B%5D" in auth_url
+
+
+def test_OAuth2_dynamic_salt_encryption():
+    """
+    Test that dynamic salt encryption works correctly and produces different results
+    """
+    auth = OAuth2(
+        url="https://localhost/token",
+        client_id="123",
+        client_secret="ABC",
+        scope="api",
+    )
+
+    test_state = {"access_token": "test_token", "token_type": "Bearer"}
+
+    # Encrypt the same state multiple times
+    auth._state = test_state
+    first_encryption = auth._encrypted_state
+
+    auth._state = test_state
+    second_encryption = auth._encrypted_state
+
+    # Verify that each encryption produces different results (due to random salt)
+    assert first_encryption != second_encryption
+
+    # Verify that both can be decrypted correctly
+    auth._encrypted_state = first_encryption
+    assert auth._state == test_state
+
+    auth._encrypted_state = second_encryption
+    assert auth._state == test_state
+
+
+def test_OAuth2_salt_storage_format():
+    """
+    Test that salt is properly stored with encrypted data
+    """
+    auth = OAuth2(
+        url="https://localhost/token",
+        client_id="123",
+        client_secret="ABC",
+        scope="api",
+    )
+
+    test_state = {"access_token": "test_token", "token_type": "Bearer"}
+    auth._state = test_state
+
+    # Verify that encrypted data has salt prefix (16 bytes + encrypted data)
+    assert len(auth._encrypted_state) > 16
+
+    # Verify that the first 16 bytes are the salt
+    salt = auth._encrypted_state[:16]
+    encrypted_data = auth._encrypted_state[16:]
+
+    # Verify that we can decrypt using the extracted salt
+    fernet = auth._create_fernet_with_salt(salt)
+    decrypted_data = fernet.decrypt(encrypted_data)
+    decrypted_state = json.loads(decrypted_data.decode("utf-8"))
+
+    assert decrypted_state == test_state
+
+
+def test_OAuth2_backward_compatibility_old_salt():
+    """
+    Test backward compatibility with old fixed salt format
+    """
+    auth = OAuth2(
+        url="https://localhost/token",
+        client_id="123",
+        client_secret="ABC",
+        scope="api",
+    )
+
+    # Create encrypted data using old fixed salt format (simulating original implementation)
+    old_salt = b"cruds_oauth_salt"
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=old_salt,
+        iterations=100000,
+    )
+    key = urlsafe_b64encode(kdf.derive(auth.client_secret.encode()))
+    old_fernet = Fernet(key)
+
+    test_state = {"access_token": "old_token", "token_type": "Bearer"}
+    old_encrypted_data = old_fernet.encrypt(json.dumps(test_state).encode("utf-8"))
+
+    # Debug: Check the length of the encrypted data
+    print(f"Old encrypted data length: {len(old_encrypted_data)}")
+    print(f"Is < 16: {len(old_encrypted_data) < 16}")
+
+    # Set the old format encrypted data (no salt prefix)
+    auth._encrypted_state = old_encrypted_data
+
+    # Verify that it can be decrypted correctly
+    # Note: This should work because the decryption method checks for old format
+    decrypted_state = auth._state
+    assert decrypted_state == test_state
+
+
+def test_OAuth2_encryption_key_generation():
+    """
+    Test that encryption key generation works correctly with different salts
+    """
+    auth = OAuth2(
+        url="https://localhost/token",
+        client_id="123",
+        client_secret="ABC",
+        scope="api",
+    )
+
+    # Test with different salts
+    salt1 = b"test_salt_1_16b"
+    salt2 = b"test_salt_2_16b"
+
+    key1 = auth._generate_encryption_key(salt1)
+    key2 = auth._generate_encryption_key(salt2)
+
+    # Verify that different salts produce different keys
+    assert key1 != key2
+
+    # Verify that keys are valid Fernet keys (base64 encoded, 44 chars)
+    assert len(key1) == 44
+    assert len(key2) == 44
+
+
+def test_OAuth2_fernet_creation_with_salt():
+    """
+    Test that Fernet instances can be created with different salts
+    """
+    auth = OAuth2(
+        url="https://localhost/token",
+        client_id="123",
+        client_secret="ABC",
+        scope="api",
+    )
+
+    salt = b"test_salt_16bytes"
+    fernet = auth._create_fernet_with_salt(salt)
+
+    # Verify that Fernet instance can encrypt and decrypt
+    test_data = b"test_data"
+    encrypted = fernet.encrypt(test_data)
+    decrypted = fernet.decrypt(encrypted)
+
+    assert decrypted == test_data
+
+
+def test_OAuth2_decryption_error_handling_with_salt():
+    """
+    Test that decryption errors are handled gracefully with salt format
+    """
+    auth = OAuth2(
+        url="https://localhost/token",
+        client_id="123",
+        client_secret="ABC",
+        scope="api",
+    )
+
+    # Test with invalid salt format (too short)
+    auth._encrypted_state = b"short"
+    assert auth._state == {}
+
+    # Test with invalid salt format (wrong salt)
+    invalid_salt = b"invalid_salt_16b"
+    fernet = auth._create_fernet_with_salt(invalid_salt)
+    invalid_encrypted = fernet.encrypt(b"test")
+
+    # Create data with wrong salt
+    auth._encrypted_state = invalid_salt + invalid_encrypted
+    assert auth._state == {}
+
+
+def test_OAuth2_encryption_modes_comparison():
+    """
+    Test that both encryption modes work correctly
+    """
+    # Test dynamic encryption (no encryption_key)
+    auth_dynamic = OAuth2(
+        url="https://localhost/token",
+        client_id="123",
+        client_secret="ABC",
+        scope="api",
+    )
+
+    # Test fixed encryption (with encryption_key)
+    auth_fixed = OAuth2(
+        url="https://localhost/token",
+        client_id="123",
+        client_secret="ABC",
+        scope="api",
+        encryption_key="my-secret-encryption-key-32-chars-long",
+    )
+
+    test_state = {"access_token": "test_token", "token_type": "Bearer"}
+
+    # Test dynamic encryption
+    auth_dynamic._state = test_state
+    assert auth_dynamic._state == test_state
+    assert len(auth_dynamic._encrypted_state) > 16  # Has salt prefix
+
+    # Test fixed encryption
+    auth_fixed._state = test_state
+    assert auth_fixed._state == test_state
+    # Fernet output is typically longer than 16 bytes, but doesn't have salt prefix
+    # The key difference is that dynamic encryption has salt + encrypted data
+    # while fixed encryption just has encrypted data
+
+    # Verify that they produce different encrypted formats
+    assert auth_dynamic._encrypted_state != auth_fixed._encrypted_state
