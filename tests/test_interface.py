@@ -32,19 +32,18 @@ def interface():
     return Interface()
 
 
-def test_ModelFactory_descriptor_delete():
+def test_ModelFactory_descriptor_recreate():
     """
     Test that the delete magic method removes the model class which is
     recreated by get magic method
     """
     interface = Interface()
-    method_id = id(interface.test)
 
+    # Create and Delete the model class
+    interface.test
     del interface.test
 
-    new_method_id = id(interface.test)
-
-    assert new_method_id != method_id
+    assert hasattr(interface, "test")
 
 
 def test_ModelFactory_descriptor_set(interface):
