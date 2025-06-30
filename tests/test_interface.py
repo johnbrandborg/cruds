@@ -42,7 +42,9 @@ def test_ModelFactory_descriptor_delete():
 
     del interface.test
 
-    assert id(interface.test) != method_id
+    new_method_id = id(interface.test)
+
+    assert new_method_id != method_id
 
 
 def test_ModelFactory_descriptor_set(interface):

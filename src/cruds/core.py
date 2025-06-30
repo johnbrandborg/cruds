@@ -140,21 +140,20 @@ class Client:
                     ", ".join([str(i) for i in retry_status_codes]),
                 )
 
-                retry = urllib3.Retry(
+                retry_config = urllib3.Retry(
                     total=retries,
                     status_forcelist=retry_status_codes,
                     backoff_factor=backoff_factor,
                 )
             else:
                 logger.info("Retries: Disabled")
-                retry = False
+                retry_config = False
 
             # Create PoolManager
             self.manager = urllib3.PoolManager(
-                cert_reqs="CERT_REQUIRED" if verify_ssl else "CERT_NONE",
-                ca_certs=certifi.where(),
-                retries=retry,
-                timeout=timeout,
+                ca_certs=certifi.where() if verify_ssl else None,
+                retries=retry_config,
+                timeout=urllib3.Timeout(connect=timeout, read=timeout),
             )
 
         # Setup Headers (Authentication)
@@ -335,7 +334,7 @@ class Client:
         response: urllib3.response.BaseHTTPResponse,
     ) -> Union[Dict[Any, Any], bytes]:
         """
-        Processes the Responce from URLLib3 request in a standardize manner, and
+        Processes the Response from URLLib3 request in a standardized manner, and
         displays information.
         """
         logger.info(
@@ -352,22 +351,34 @@ class Client:
                 error_type = None
 
             if error_type:
+                # Try to decode error message, fallback to raw data
+                try:
+                    error_message = response.data.decode("utf-8")
+                except UnicodeDecodeError:
+                    error_message = str(response.data)
+
                 msg: str = (
                     f"{error_type} Error with status code {response.status}"
-                    f" Message: {response.data.decode('utf-8')}"
+                    f" Message: {error_message}"
                 )
                 raise urllib3.exceptions.HTTPError(msg)
 
-        if self.serialize:
-            if "application/json" in response.headers.get("Content-Type", ""):
-                return response.json()
+        if self.serialize and response.data is not None:
+            content_type = response.headers.get("Content-Type", "").lower()
+            is_json_content_type = "application/json" in content_type
 
-            logger.warning(
-                "Response content type is not declared as JSON but serialize is enabled"
-            )
+            # Try to parse as JSON regardless of content-type
+            # This handles APIs that return JSON but don't set the correct content-type
             try:
                 return response.json()
-            except JSONDecodeError:
+            except JSONDecodeError as e:
+                if is_json_content_type:
+                    logger.warning(f"Failed to parse JSON response: {e}")
+                else:
+                    logger.debug(
+                        f"Response content type '{content_type}' is not JSON and "
+                        f"response data could not be parsed as JSON"
+                    )
                 return response.data
 
         return response.data

@@ -26,18 +26,18 @@ def __init__(
     self._bulk_upsert_response = {}
 
 
-@property
+@property  # type: ignore[misc]
 def calls_per_min(self) -> int:
     return self._calls_per_min
 
 
-@calls_per_min.setter
+@calls_per_min.setter  # type: ignore[misc]
 def calls_per_min(self, value) -> None:
     self._calls_per_min = value
     self._delay = 60 / max(min(value, 200), 1)
 
 
-@staticmethod
+@staticmethod  # type: ignore[misc]
 def epoc_days_format(date: str, reference="1970-01-01") -> int:
     """
     Takes an ISO formatted datetime string and returns the amount of lapsed
@@ -46,7 +46,7 @@ def epoc_days_format(date: str, reference="1970-01-01") -> int:
     return (datetime.fromisoformat(date) - datetime.fromisoformat(reference)).days
 
 
-@property
+@property  # type: ignore[misc]
 def tenant_token(self) -> str:
     if self.__tenant_token is None:
         raise RuntimeError("No tenant token has been supplied")
@@ -54,7 +54,7 @@ def tenant_token(self) -> str:
     return self.__tenant_token
 
 
-@tenant_token.setter
+@tenant_token.setter  # type: ignore[misc]
 def tenant_token(self, value) -> None:
     self.__tenant_token = value
 
@@ -83,7 +83,7 @@ def bulk_upsert_response_check(self) -> None:
         logger.info(f"{error['type']} check passed.")
 
 
-@staticmethod
+@staticmethod  # type: ignore[misc]
 def _sum_bulk_upsert_responses(total: dict, response: dict) -> None:
     """
     Takes two Dictionaries and sums or extends the values in the response into the
@@ -351,7 +351,7 @@ def calculate_metric_chunk_size(
     else:
         return 0
 
-    sample_positions = set()
+    sample_positions: set[int] = set()
 
     while len(sample_positions) < sample_count:
         sample_positions.add(randint(0, len(data) - 1))

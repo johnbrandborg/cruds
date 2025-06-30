@@ -705,8 +705,11 @@ def test_bulk_insert_metrics_chunking(planhat_model):
     data = [{"a": i} for i in range(10)]
     planhat_model._owner.client_analytics.create = MagicMock(return_value={"ok": True})
     # Patch chunk size to 2 for predictable chunking
-    with mock.patch(
-        "cruds.interfaces.planhat.logic.calculate_metric_chunk_size", return_value=2
+    with (
+        mock.patch(
+            "cruds.interfaces.planhat.logic.calculate_metric_chunk_size", return_value=2
+        ),
+        mock.patch("cruds.interfaces.planhat.logic.sleep"),
     ):
         result = planhat_model.bulk_insert_metrics(data, auto_chunk=True)
     assert planhat_model._owner.client_analytics.create.call_count == 5
@@ -744,8 +747,11 @@ def test_create_activity_bulk_chunking(planhat_model):
     """
     data = [{"a": i} for i in range(10)]
     planhat_model._owner.client_analytics.create = MagicMock(return_value={"ok": True})
-    with mock.patch(
-        "cruds.interfaces.planhat.logic.calculate_metric_chunk_size", return_value=2
+    with (
+        mock.patch(
+            "cruds.interfaces.planhat.logic.calculate_metric_chunk_size", return_value=2
+        ),
+        mock.patch("cruds.interfaces.planhat.logic.sleep"),
     ):
         result = planhat_model.create_activity(data, bulk=True, auto_chunk=True)
     assert planhat_model._owner.client_analytics.create.call_count == 5
@@ -771,8 +777,11 @@ def test_segment_chunking(planhat_model):
     """
     data = [{"a": i} for i in range(10)]
     planhat_model._owner.client_analytics.create = MagicMock(return_value={"ok": True})
-    with mock.patch(
-        "cruds.interfaces.planhat.logic.calculate_metric_chunk_size", return_value=2
+    with (
+        mock.patch(
+            "cruds.interfaces.planhat.logic.calculate_metric_chunk_size", return_value=2
+        ),
+        mock.patch("cruds.interfaces.planhat.logic.sleep"),
     ):
         result = planhat_model.segment(data, auto_chunk=True)
     assert planhat_model._owner.client_analytics.create.call_count == 5

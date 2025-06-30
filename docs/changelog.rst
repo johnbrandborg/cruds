@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Release 1.4.0 (June 30, 2025)
+------------------------------
+
+Features:
+ - Updated supported Python versions for 3.9 to 3.12. Python 3.8 is no longer supported.
+ - URLLib3 2.5.0 is now supported, and updated SSL Cerification Verification.
+ - OAuth2 state is now transparently encrypted and decrypted to prevent token leakage.
+ - OAuth2 now supports the Authorization Code flow with state parameter for CSRF protection.
+
 Release 1.3.9 (November 7, 2024)
 --------------------------------
 

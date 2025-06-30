@@ -142,15 +142,24 @@ Authorization Flows:
 
  1. Client Credentials
  2. Resource Owner Password (if username and password arguments are supplied)
+ 3. Authorization Code (with state parameter for CSRF protection)
 
 When an expiry time is returned by the server with the access token refreshing
 is taken care of automatically, along with using refresh tokens.
+
+**Security Features:**
+
+- **Token Encryption**: All token state is encrypted in memory using Fernet encryption
+- **Custom Encryption Keys**: You can provide your own encryption key for enhanced security
+- **Automatic Key Derivation**: If no custom key is provided, a key is derived from the client_secret
+- **State Parameter**: CSRF protection for Authorization Code flow using cryptographically secure state parameters
 
 .. code-block:: python
 
     from cruds import Client
     from cruds.auth import OAuth2
 
+    # Basic OAuth2 with automatic key derivation
     api = Client(
         host="https://host/",
         auth=OAuth2(
@@ -168,11 +177,59 @@ is taken care of automatically, along with using refresh tokens.
         )
     )
 
+    # OAuth2 with custom encryption key (recommended for production)
+    api = Client(
+        host="https://host/",
+        auth=OAuth2(
+            url="https://host/token",
+            client_id="id",
+            client_secret="secret",
+            scope="all-apis",
+            encryption_key="your-32-character-encryption-key-here"
+        )
+    )
+
+    # Authorization Code flow with state parameter (most secure for user-facing apps)
+    oauth = OAuth2(
+        url="https://host/token",
+        client_id="id",
+        client_secret="secret",
+        scope="all-apis",
+        authorization_url="https://host/authorize",
+        redirect_uri="https://your-app.com/callback",
+        encryption_key="your-32-character-encryption-key-here"
+    )
+
+    # Step 1: Generate authorization URL with state parameter
+    auth_url = oauth.get_authorization_url()
+    # Redirect user to auth_url
+
+    # Step 2: After user authorization, parse the redirect response
+    redirect_url = "https://your-app.com/callback?code=abc123&state=xyz789"
+    code, state = oauth.parse_authorization_response(redirect_url)
+
+    # Step 3: Exchange authorization code for access token
+    access_token = oauth.exchange_code_for_token(code, state)
+
+    # Use the OAuth2 instance with the Client
+    api = Client(host="https://host/", auth=oauth)
+
 .. note::
 
   The OAuth 2.0 framework will take time to implement and implemented properly.
   Support in improving this coverage is very welcome. Let the project know of
   any Issues.
+
+.. note::
+
+  For production environments, it's recommended to provide a custom encryption_key
+  rather than relying on automatic key derivation from client_secret.
+
+.. note::
+
+  The Authorization Code flow with state parameter is the most secure OAuth flow
+  for user-facing applications, providing CSRF protection and following OAuth 2.0
+  security best practices.
 
 Serialize
 ---------
