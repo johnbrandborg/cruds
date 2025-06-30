@@ -1243,7 +1243,7 @@ def test_OAuth2_authorization_url_with_complex_authorization_details():
 
 def test_OAuth2_access_token_returns_empty_string_on_invalid():
     """
-    Test that access_token raises RuntimeError when token is invalid after refresh.
+    Test that access_token raises RuntimeError when token is invalid after refresh
     """
     auth = OAuth2(
         url="https://localhost/token",
@@ -1251,15 +1251,114 @@ def test_OAuth2_access_token_returns_empty_string_on_invalid():
         client_secret="ABC",
         scope="api",
     )
-    invalid_response = json.dumps(
-        {
-            "token_type": "Invalid",  # Not "Bearer"
-            "expires_in": 3600,
-        }
-    ).encode("utf-8")
-    mock_resp = HTTPResponse(invalid_response, status=200)
-    with mock.patch("urllib3.request", return_value=mock_resp):
+    # Mock response with invalid token (missing access_token)
+    mock_response = mock.Mock()
+    mock_response.status = 200
+    mock_response.json.return_value = {"token_type": "Bearer", "expires_in": 60}
+    mock_response.data = b"invalid response"
+    with mock.patch("urllib3.request", return_value=mock_response):
+        import pytest
+
         with pytest.raises(
             RuntimeError, match="Auth state is missing critical information"
         ):
             auth.access_token()
+
+
+def test_OAuth2_authorization_details_string_not_list():
+    """
+    Test authorization URL generation when authorization_details is a string (not list)
+    This covers line 188 in auth.py
+    """
+    auth = OAuth2(
+        url="https://localhost/token",
+        client_id="123",
+        client_secret="ABC",
+        scope="api",
+        authorization_url="https://localhost/authorize",
+        redirect_uri="https://localhost/callback",
+        authorization_details='{"type": "permissions", "operation": "read"}',
+    )
+    auth_url = auth.get_authorization_url()
+    # Should be URL-encoded JSON string
+    assert (
+        "authorization_details=%7B%22type%22%3A+%22permissions%22%2C+%22operation%22%3A+%22read%22%7D"
+        in auth_url
+    )
+
+
+def test_OAuth2_exchange_code_for_token_unicode_decode_error():
+    """
+    Covers UnicodeDecodeError handling in exchange_code_for_token (lines 255-256).
+    """
+    auth = OAuth2(
+        url="https://localhost/token",
+        client_id="id",
+        client_secret="secret",
+        scope="api",
+        authorization_url="https://localhost/authorize",
+        redirect_uri="https://localhost/callback",
+    )
+    auth.get_authorization_url()
+    state = auth._pending_state
+
+    class MockResponse:
+        status = 500
+        data = b"\xff\xfe\xfd"
+
+        def json(self):
+            raise Exception("Should not be called")
+
+    def mock_request(*args, **kwargs):
+        return MockResponse()
+
+    with mock.patch("urllib3.request", mock_request):
+        with pytest.raises(urllib3.exceptions.HTTPError) as exc_info:
+            auth.exchange_code_for_token("code", state)
+
+        assert (
+            str(exc_info.value)
+            == "Error with status code 500 Message: b'\\xff\\xfe\\xfd'"
+        )
+
+
+def test_OAuth2_access_token_unicode_decode_error_in_main_flow():
+    """
+    Test UnicodeDecodeError handling in main access_token method
+    """
+    auth = OAuth2(
+        url="https://localhost/token",
+        client_id="123",
+        client_secret="ABC",
+        scope="api",
+    )
+    mock_response = mock.Mock()
+    mock_response.status = 500
+    mock_response.data = b"\xff\xfe\xfd"
+    mock_response.json.side_effect = Exception("JSON decode failed")
+    with mock.patch("urllib3.request", return_value=mock_response):
+        with pytest.raises(urllib3.exceptions.HTTPError) as exc_info:
+            auth.access_token()
+
+        assert (
+            str(exc_info.value)
+            == "Error with status code 500 Message: b'\\xff\\xfe\\xfd'"
+        )
+
+
+def test_OAuth2_authorization_details_empty_list():
+    """
+    Test authorization URL generation when authorization_details is an empty list
+    """
+    auth = OAuth2(
+        url="https://localhost/token",
+        client_id="123",
+        client_secret="ABC",
+        scope="api",
+        authorization_url="https://localhost/authorize",
+        redirect_uri="https://localhost/callback",
+        authorization_details=[],
+    )
+    auth_url = auth.get_authorization_url()
+    # Should be URL-encoded []
+    assert "authorization_details=%5B%5D" in auth_url

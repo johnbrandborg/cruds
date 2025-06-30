@@ -26,18 +26,18 @@ def __init__(
     self._bulk_upsert_response = {}
 
 
-@property  # type: ignore[misc]
+@property
 def calls_per_min(self) -> int:
     return self._calls_per_min
 
 
-@calls_per_min.setter  # type: ignore[misc]
+@calls_per_min.setter
 def calls_per_min(self, value) -> None:
     self._calls_per_min = value
     self._delay = 60 / max(min(value, 200), 1)
 
 
-@staticmethod  # type: ignore[misc]
+@staticmethod
 def epoc_days_format(date: str, reference="1970-01-01") -> int:
     """
     Takes an ISO formatted datetime string and returns the amount of lapsed
@@ -46,7 +46,7 @@ def epoc_days_format(date: str, reference="1970-01-01") -> int:
     return (datetime.fromisoformat(date) - datetime.fromisoformat(reference)).days
 
 
-@property  # type: ignore[misc]
+@property
 def tenant_token(self) -> str:
     if self.__tenant_token is None:
         raise RuntimeError("No tenant token has been supplied")
@@ -54,7 +54,7 @@ def tenant_token(self) -> str:
     return self.__tenant_token
 
 
-@tenant_token.setter  # type: ignore[misc]
+@tenant_token.setter
 def tenant_token(self, value) -> None:
     self.__tenant_token = value
 
@@ -83,7 +83,7 @@ def bulk_upsert_response_check(self) -> None:
         logger.info(f"{error['type']} check passed.")
 
 
-@staticmethod  # type: ignore[misc]
+@staticmethod
 def _sum_bulk_upsert_responses(total: dict, response: dict) -> None:
     """
     Takes two Dictionaries and sums or extends the values in the response into the

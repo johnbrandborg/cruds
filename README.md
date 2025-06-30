@@ -12,7 +12,7 @@ communication, automated data processing and interactive environments like Noteb
 ```python
 >>> import cruds
 >>>
->>> catfact_ninja = cruds.Client("https://catfact.ninja/")
+>>> catfact_ninja = cruds.Client("catfact.ninja")
 >>>
 >>> data = catfact_ninja.read("fact")
 >>> type(date)  # Python built-in data types you can use instantly!
@@ -20,7 +20,7 @@ communication, automated data processing and interactive environments like Noteb
 ```
 
 Make Create, Read, Update and Delete operations quickly, easily, and safely. CRUDs
-aims to implement URLLib3's best practises while remain as light as possible.
+aims to implement URLLib3's best practises while remaining as light as possible.
 
 Features:
  * Authentication: Username & Password, Bearer Token and OAuth2

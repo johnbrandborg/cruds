@@ -28,7 +28,7 @@ communication, automated data processing and interactive environments like Noteb
 
     >>> import cruds
     >>>
-    >>> catfact_ninja = cruds.Client("https://catfact.ninja/")
+    >>> catfact_ninja = cruds.Client("catfact.ninja")
     >>>
     >>> data = catfact_ninja.read("fact")
     >>> type(data)  # Python built-in data types you can use instantly!

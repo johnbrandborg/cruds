@@ -255,11 +255,9 @@ class OAuth2(AuthABC):
             except UnicodeDecodeError:
                 error_message = str(response.data)
 
-            error_msg: str = (
-                f"Error with status code {response.status}",
-                f" Message: {error_message}",
+            raise urllib3.exceptions.HTTPError(
+                f"Error with status code {response.status} Message: {error_message}"
             )
-            raise urllib3.exceptions.HTTPError(error_msg)
 
         # Store the token response
         access_token = response.json()
@@ -353,14 +351,14 @@ class OAuth2(AuthABC):
 
     def access_token(self) -> str:
         if self.is_valid():
-            logging.debug("OAuth Token is still valid")
+            logger.debug("OAuth Token is still valid")
             return self._state["access_token"]
 
-        logging.debug("Retrieving OAuth token")
+        logger.debug("Retrieving OAuth token")
 
         # Determine if a refresh_token needs to be used.
         if refresh_token := self._state.get("refresh_token"):
-            logging.debug("Use refresh token to renew access token")
+            logger.debug("Use refresh token to renew access token")
             fields = {
                 "grant_type": "refresh_token",
                 "refresh_token": refresh_token,
@@ -416,11 +414,9 @@ class OAuth2(AuthABC):
             except UnicodeDecodeError:
                 error_message = str(response.data)
 
-            error_msg: str = (
-                f"Error with status code {response.status}",
-                f"Message: {error_message}",
+            raise urllib3.exceptions.HTTPError(
+                f"Error with status code {response.status} Message: {error_message}"
             )
-            raise urllib3.exceptions.HTTPError(error_msg)
 
         access_token = response.json()
         access_token["created"] = int(time())
