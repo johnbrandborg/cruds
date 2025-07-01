@@ -50,10 +50,20 @@ def test_Client_use_supplied_urllib3_manager():
 def test_Client_disable_retries():
     """Setting the retries to 0 or None will disable retries being used"""
     api = cruds.Client(host="https://localhost", retries=0)
-    assert api.manager.connection_pool_kw.get("retries") == 0
+    retries = api.manager.connection_pool_kw.get("retries")
+    assert retries.total is False
+    assert retries.connect is None
+    assert retries.read is None
+    assert retries.redirect == 0
+    assert retries.status is None
 
-    cruds.Client(host="https://localhost", retries=None)
-    assert api.manager.connection_pool_kw.get("retries") == 0
+    api = cruds.Client(host="https://localhost", retries=None)
+    retries = api.manager.connection_pool_kw.get("retries")
+    assert retries.total is False
+    assert retries.connect is None
+    assert retries.read is None
+    assert retries.redirect == 0
+    assert retries.status is None
 
 
 @pytest.fixture
@@ -312,3 +322,163 @@ def test__check_auth_still_valid():
 
     api = cruds.Client(host="https://localhost", auth=MockAuth())
     assert api.request_headers.get("Authorization") is None
+
+
+def test_Client_ssl_configuration_verify_ssl_true():
+    """
+    Test that SSL verification is properly configured when verify_ssl=True.
+    """
+    api = cruds.Client(host="https://localhost", verify_ssl=True)
+    # Check that ca_certs is set when verify_ssl is True
+    assert api.manager.connection_pool_kw.get("ca_certs") is not None
+
+
+def test_Client_ssl_configuration_verify_ssl_false():
+    """
+    Test that SSL verification is properly configured when verify_ssl=False.
+    """
+    api = cruds.Client(host="https://localhost", verify_ssl=False)
+    # Check that ca_certs is None when verify_ssl is False
+    assert api.manager.connection_pool_kw.get("ca_certs") is None
+
+
+def test_Client_timeout_configuration():
+    """
+    Test that timeout is properly configured using urllib3.Timeout object.
+    """
+    timeout_value = 60.0
+    api = cruds.Client(host="https://localhost", timeout=timeout_value)
+    timeout_obj = api.manager.connection_pool_kw.get("timeout")
+    assert isinstance(timeout_obj, urllib3.Timeout)
+    # Check that the timeout object has the expected timeout values
+    assert timeout_obj.connect_timeout == timeout_value
+    assert timeout_obj.read_timeout == timeout_value
+
+
+def test_Client_process_resp_unicode_decode_error():
+    """
+    Test that Unicode decode errors in error messages are handled gracefully.
+    """
+    api = cruds.Client(host="https://localhost")
+    # Create response with non-UTF-8 bytes
+    mock_resp = urllib3.HTTPResponse(
+        body=b"\xff\xfe\x00\x00",  # Invalid UTF-8 bytes
+        status=400,
+    )
+
+    with pytest.raises(urllib3.exceptions.HTTPError) as exc_info:
+        api._process_resp("", mock_resp)
+
+    # Should not crash and should include the raw bytes in the error message
+    assert "Client Error with status code 400" in str(exc_info.value)
+    assert "Message:" in str(exc_info.value)
+
+
+def test_Client_process_resp_json_content_type_success():
+    """
+    Test JSON parsing when content-type indicates JSON and parsing succeeds.
+    """
+    api = cruds.Client(host="https://localhost")
+    mock_resp = urllib3.HTTPResponse(
+        body=b'{"name": "test_json_success"}',
+        headers={"Content-Type": "application/json; charset=utf-8"},
+        status=200,
+    )
+
+    result = api._process_resp("", mock_resp)
+    assert result == {"name": "test_json_success"}
+
+
+def test_Client_process_resp_json_content_type_failure():
+    """
+    Test JSON parsing when content-type indicates JSON but parsing fails.
+    """
+    api = cruds.Client(host="https://localhost")
+    mock_resp = urllib3.HTTPResponse(
+        body=b"invalid json content",
+        headers={"Content-Type": "application/json; charset=utf-8"},
+        status=200,
+    )
+
+    result = api._process_resp("", mock_resp)
+    # Should return raw bytes when JSON parsing fails
+    assert result == b"invalid json content"
+
+
+def test_Client_process_resp_non_json_content_type_success():
+    """
+    Test JSON parsing when content-type doesn't indicate JSON but parsing succeeds.
+    """
+    api = cruds.Client(host="https://localhost")
+    mock_resp = urllib3.HTTPResponse(
+        body=b'{"name": "test_non_json_success"}',
+        headers={"Content-Type": "text/plain; charset=utf-8"},
+        status=200,
+    )
+
+    result = api._process_resp("", mock_resp)
+    # Should still parse JSON even if content-type doesn't indicate JSON
+    assert result == {"name": "test_non_json_success"}
+
+
+def test_Client_process_resp_non_json_content_type_failure():
+    """
+    Test JSON parsing when content-type doesn't indicate JSON and parsing fails.
+    """
+    api = cruds.Client(host="https://localhost")
+    mock_resp = urllib3.HTTPResponse(
+        body=b"plain text content",
+        headers={"Content-Type": "text/plain; charset=utf-8"},
+        status=200,
+    )
+
+    result = api._process_resp("", mock_resp)
+    # Should return raw bytes when JSON parsing fails
+    assert result == b"plain text content"
+
+
+def test_Client_process_resp_no_content_type():
+    """
+    Test JSON parsing when no content-type header is present.
+    """
+    api = cruds.Client(host="https://localhost")
+    mock_resp = urllib3.HTTPResponse(
+        body=b'{"name": "test_no_content_type"}', headers={}, status=200
+    )
+
+    result = api._process_resp("", mock_resp)
+    # Should still attempt JSON parsing
+    assert result == {"name": "test_no_content_type"}
+
+
+def test_Client_process_resp_empty_response():
+    """
+    Test handling of empty response data.
+    """
+    api = cruds.Client(host="https://localhost")
+    # Create a mock response with None data to simulate empty response
+    mock_resp = urllib3.HTTPResponse(
+        body=None,  # Use None to simulate empty response
+        headers={"Content-Type": "application/json; charset=utf-8"},
+        status=200,
+    )
+
+    result = api._process_resp("", mock_resp)
+    # Should return None when data is None
+    assert result is None
+
+
+def test_Client_process_resp_case_insensitive_content_type():
+    """
+    Test that content-type checking is case insensitive.
+    """
+    api = cruds.Client(host="https://localhost")
+    mock_resp = urllib3.HTTPResponse(
+        body=b'{"name": "test_case_insensitive"}',
+        headers={"Content-Type": "APPLICATION/JSON; charset=utf-8"},
+        status=200,
+    )
+
+    result = api._process_resp("", mock_resp)
+    # Should parse JSON even with uppercase content-type
+    assert result == {"name": "test_case_insensitive"}

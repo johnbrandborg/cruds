@@ -1,7 +1,7 @@
 import importlib
 from logging import getLogger
 import os
-from typing import Any, Callable, List
+from typing import Any, Callable, List, Union
 
 from jsonschema import validate
 import yaml
@@ -94,7 +94,7 @@ def _create_interfaces_v1(config: dict):
                 methods=method_map,
             )
 
-        interface_methods: dict[str, Callable | None] = {
+        interface_methods: dict[str, Union[Callable, None]] = {
             name: interface_code.get(name)
             for name in api.get("methods") or ["__init__"]
         }

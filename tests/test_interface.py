@@ -32,17 +32,18 @@ def interface():
     return Interface()
 
 
-def test_ModelFactory_descriptor_delete():
+def test_ModelFactory_descriptor_recreate():
     """
     Test that the delete magic method removes the model class which is
     recreated by get magic method
     """
     interface = Interface()
-    method_id = id(interface.test)
 
+    # Create and Delete the model class
+    interface.test
     del interface.test
 
-    # assert id(interface.test) != method_id
+    assert hasattr(interface, "test")
 
 
 def test_ModelFactory_descriptor_set(interface):
@@ -154,11 +155,12 @@ def test_load_config_invalid_version():
     version: 0
     """
 
-    with patch("builtins.open", mock_open()), patch(
-        "builtins.open", mock_open(read_data=sample_config)
-    ), patch("cruds.interface.validate", mock_validate), pytest.raises(
-        ValueError
-    ) as e_info:
+    with (
+        patch("builtins.open", mock_open()),
+        patch("builtins.open", mock_open(read_data=sample_config)),
+        patch("cruds.interface.validate", mock_validate),
+        pytest.raises(ValueError) as e_info,
+    ):
         cruds.interface.load_config("test_interface").__next__()
 
     assert "Configuration has no valid version" == str(e_info.value)
@@ -176,11 +178,21 @@ def test_load_config_version_1():
     version: 1
     """
 
-    with patch("builtins.open", mock_open()), patch(
-        "builtins.open", mock_open(read_data=sample_config)
-    ), patch("cruds.interface.validate", mock_validate), patch(
-        "cruds.interface._create_interfaces_v1", mock_create_interface_v1
+    with (
+        patch("builtins.open", mock_open()),
+        patch("builtins.open", mock_open(read_data=sample_config)),
+        patch("cruds.interface.validate", mock_validate),
+        patch("cruds.interface._create_interfaces_v1", mock_create_interface_v1),
     ):
         for interface in cruds.interface.load_config("test_interface"):
             assert interface == "Version1Interface"
             mock_create_interface_v1.assert_called_once_with({"version": 1})
+
+
+def test_interface_method_removal():
+    """
+    Test that methods can be removed from the interface
+    """
+    interface = Interface()
+
+    del interface.test

@@ -7,12 +7,12 @@
 [![Documentation Status](https://readthedocs.org/projects/cruds/badge/?version=latest)](https://cruds.readthedocs.io/en/latest/?badge=latest)
 
 **CRUDs** is a high level client library for APIs written in Python, and is ideal for back-end
-communication, automated data processing, and interactive environments like Notebooks.
+communication, automated data processing and interactive environments like Notebooks.
 
 ```python
 >>> import cruds
 >>>
->>> catfact_ninja = cruds.Client("https://catfact.ninja/")
+>>> catfact_ninja = cruds.Client("catfact.ninja")
 >>>
 >>> data = catfact_ninja.read("fact")
 >>> type(date)  # Python built-in data types you can use instantly!
@@ -20,17 +20,16 @@ communication, automated data processing, and interactive environments like Note
 ```
 
 Make Create, Read, Update and Delete operations quickly, easily, and safely. CRUDs
-aims to handle the majority of the setup needed for production so you can focus
-on moving data.
+aims to implement URLLib3's best practises while remaining as light as possible.
 
 Features:
- * Authentication: Username & Password, Bearer Token or OAuth2
+ * Authentication: Username & Password, Bearer Token and OAuth2
  * JSON Serialization/Deserialization
  * Request parameters and automatically URL encoded
- * Default connection timeout (5 minutes)
- * Raises exceptions on bad status codes
- * Retries with back-off
- * SSL Verification
+ * Configurable timeouts (default 5 minutes)
+ * Exceptions handling for bad status codes
+ * Built-in retry logic with exponential backoff
+ * SSL Certificate Verification
  * Logging for monitoring
  * Interfaces (SDK Creation)
 
