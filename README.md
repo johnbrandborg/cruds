@@ -33,6 +33,12 @@ Features:
  * Logging for monitoring
  * Interfaces (SDK Creation)
 
+### Interfaces
+
+CRUDs provides pre-configured interfaces for popular APIs, making integration even easier:
+
+* **PlanHat** - Complete customer success platform interface with 20+ data models, bulk operations, and advanced analytics. [View Documentation](https://cruds.readthedocs.io/en/latest/interfaces.html#planhat)
+
 ### Installation
 
 To install a stable version use [PyPI](https://pypi.org/project/cruds/).
