@@ -35,6 +35,7 @@ jobs:
         run: make test-report
 
       - name: SonarQube Scan
+        if: matrix.python-version == '3.9'
         uses: SonarSource/sonarqube-scan-action@v4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
