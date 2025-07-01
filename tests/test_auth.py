@@ -13,6 +13,8 @@ from cruds.auth import OAuth2
 from cruds.exception import OAuthAccessTokenError, OAuthStateError
 import urllib3
 import hashlib
+import hmac
+import secrets
 
 access_token: str = "MTQ0NjJkZmQ5OTM2NDE1ZTZjNGZmZjI3"
 refresh_token: str = "IwOGYzYTlmM2YxOTQ5MGE3YmNmMDFkNTVk"
@@ -1572,3 +1574,66 @@ def test_OAuth2_encryption_modes_comparison():
 
     # Verify that they produce different encrypted formats
     assert auth_dynamic._encrypted_state != auth_fixed._encrypted_state
+
+
+def test_OAuth2_decrypt_with_key_invalid_padding():
+    """
+    Test that _decrypt_with_key raises ValueError for invalid padding values.
+    This specifically tests line 199 in auth.py.
+    """
+    auth = OAuth2(
+        url="https://localhost/token",
+        client_id="123",
+        client_secret="ABC",
+        scope="api",
+    )
+
+    # Create a valid key
+    key = auth._generate_encryption_key(b"test_salt_16bytes")
+
+    # Test case 1: padding_length > 16
+    # Create data with invalid padding (17 bytes of padding with value 17)
+    test_data = b"test_data"
+    invalid_padded_data = test_data + bytes(
+        [17] * 17
+    )  # 17 bytes of padding with value 17
+
+    # Encrypt this data manually to bypass HMAC issues
+    iv = secrets.token_bytes(16)
+    encrypted = bytearray()
+    for i, byte in enumerate(invalid_padded_data):
+        key_byte = key[i % len(key)]
+        encrypted.append(byte ^ key_byte)
+
+    # Create HMAC for the encrypted data
+    h = hmac.new(key, iv + bytes(encrypted), hashlib.sha256)
+    hmac_digest = h.digest()
+
+    # Combine: IV + encrypted + HMAC
+    invalid_encrypted_data = iv + bytes(encrypted) + hmac_digest
+
+    # This should raise ValueError due to invalid padding (> 16)
+    with pytest.raises(ValueError, match="Invalid padding"):
+        auth._decrypt_with_key(invalid_encrypted_data, key)
+
+    # Test case 2: padding_length == 0
+    # Create data with zero padding (16 bytes of padding with value 0)
+    zero_padded_data = test_data + bytes([0] * 16)  # 16 bytes of padding with value 0
+
+    # Encrypt this data manually
+    iv_zero = secrets.token_bytes(16)
+    encrypted_zero = bytearray()
+    for i, byte in enumerate(zero_padded_data):
+        key_byte = key[i % len(key)]
+        encrypted_zero.append(byte ^ key_byte)
+
+    # Create HMAC for the encrypted data
+    h_zero = hmac.new(key, iv_zero + bytes(encrypted_zero), hashlib.sha256)
+    hmac_digest_zero = h_zero.digest()
+
+    # Combine: IV + encrypted + HMAC
+    zero_encrypted_data = iv_zero + bytes(encrypted_zero) + hmac_digest_zero
+
+    # This should raise ValueError due to zero padding
+    with pytest.raises(ValueError, match="Invalid padding"):
+        auth._decrypt_with_key(zero_encrypted_data, key)
