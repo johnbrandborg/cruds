@@ -12,10 +12,7 @@ from urllib3.response import HTTPResponse
 from cruds.auth import OAuth2
 from cruds.exception import OAuthAccessTokenError, OAuthStateError
 import urllib3
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from base64 import urlsafe_b64encode
+import hashlib
 
 access_token: str = "MTQ0NjJkZmQ5OTM2NDE1ZTZjNGZmZjI3"
 refresh_token: str = "IwOGYzYTlmM2YxOTQ5MGE3YmNmMDFkNTVk"
@@ -1419,8 +1416,8 @@ def test_OAuth2_salt_storage_format():
     encrypted_data = auth._encrypted_state[16:]
 
     # Verify that we can decrypt using the extracted salt
-    fernet = auth._create_fernet_with_salt(salt)
-    decrypted_data = fernet.decrypt(encrypted_data)
+    key = auth._generate_encryption_key(salt)
+    decrypted_data = auth._decrypt_with_key(encrypted_data, key)
     decrypted_state = json.loads(decrypted_data.decode("utf-8"))
 
     assert decrypted_state == test_state
@@ -1439,17 +1436,18 @@ def test_OAuth2_backward_compatibility_old_salt():
 
     # Create encrypted data using old fixed salt format (simulating original implementation)
     old_salt = b"cruds_oauth_salt"
-    kdf = PBKDF2HMAC(
-        algorithm=hashes.SHA256(),
-        length=32,
-        salt=old_salt,
-        iterations=100000,
+    key = hashlib.pbkdf2_hmac(
+        "sha256",
+        auth.client_secret.encode(),
+        old_salt,
+        100000,
     )
-    key = urlsafe_b64encode(kdf.derive(auth.client_secret.encode()))
-    old_fernet = Fernet(key)
 
+    # Use the new encryption method
     test_state = {"access_token": "old_token", "token_type": "Bearer"}
-    old_encrypted_data = old_fernet.encrypt(json.dumps(test_state).encode("utf-8"))
+    old_encrypted_data = auth._encrypt_with_key(
+        json.dumps(test_state).encode("utf-8"), key
+    )
 
     # Debug: Check the length of the encrypted data
     print(f"Old encrypted data length: {len(old_encrypted_data)}")
@@ -1485,14 +1483,14 @@ def test_OAuth2_encryption_key_generation():
     # Verify that different salts produce different keys
     assert key1 != key2
 
-    # Verify that keys are valid Fernet keys (base64 encoded, 44 chars)
-    assert len(key1) == 44
-    assert len(key2) == 44
+    # Verify that keys are valid encryption keys (32 bytes)
+    assert len(key1) == 32
+    assert len(key2) == 32
 
 
-def test_OAuth2_fernet_creation_with_salt():
+def test_OAuth2_encryption_with_salt():
     """
-    Test that Fernet instances can be created with different salts
+    Test that encryption can be performed with different salts
     """
     auth = OAuth2(
         url="https://localhost/token",
@@ -1502,12 +1500,12 @@ def test_OAuth2_fernet_creation_with_salt():
     )
 
     salt = b"test_salt_16bytes"
-    fernet = auth._create_fernet_with_salt(salt)
+    key = auth._generate_encryption_key(salt)
 
-    # Verify that Fernet instance can encrypt and decrypt
+    # Verify that encryption and decryption work
     test_data = b"test_data"
-    encrypted = fernet.encrypt(test_data)
-    decrypted = fernet.decrypt(encrypted)
+    encrypted = auth._encrypt_with_key(test_data, key)
+    decrypted = auth._decrypt_with_key(encrypted, key)
 
     assert decrypted == test_data
 
@@ -1529,8 +1527,8 @@ def test_OAuth2_decryption_error_handling_with_salt():
 
     # Test with invalid salt format (wrong salt)
     invalid_salt = b"invalid_salt_16b"
-    fernet = auth._create_fernet_with_salt(invalid_salt)
-    invalid_encrypted = fernet.encrypt(b"test")
+    key = auth._generate_encryption_key(invalid_salt)
+    invalid_encrypted = auth._encrypt_with_key(b"test", key)
 
     # Create data with wrong salt
     auth._encrypted_state = invalid_salt + invalid_encrypted

@@ -10,10 +10,8 @@ from urllib.parse import urlencode, parse_qs, urlparse
 from typing import Dict, Any, Optional, Tuple
 
 import urllib3
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-import base64
+import hashlib
+import hmac
 
 from .core import AuthABC
 from .exception import OAuthAccessTokenError, OAuthStateError
@@ -83,7 +81,9 @@ class OAuth2(AuthABC):
         self.state_length = state_length
 
         # Initialize encryption
-        self._fernet: Optional[Fernet] = self._initialize_encryption(encryption_key)
+        self._encryption_key: Optional[str] = self._initialize_encryption(
+            encryption_key
+        )
         self._encrypted_state = b""
 
         # State parameter for CSRF protection
@@ -91,7 +91,7 @@ class OAuth2(AuthABC):
 
     def _initialize_encryption(
         self, encryption_key: Optional[str] = None
-    ) -> Optional[Fernet]:
+    ) -> Optional[str]:
         """
         Initialize encryption using provided key.
 
@@ -100,15 +100,14 @@ class OAuth2(AuthABC):
                           handled dynamically with random salts.
 
         Returns:
-            Fernet cipher instance for encryption/decryption, or None if using dynamic encryption
+            Encryption key string, or None if using dynamic encryption
         """
         if encryption_key:
             # Use provided key
-            key = base64.urlsafe_b64encode(encryption_key.encode()[:32].ljust(32, b"0"))
-            return Fernet(key)
+            return encryption_key
         else:
             # For client_secret-based encryption, we use dynamic salts
-            # No single Fernet instance is created here
+            # No single key is created here
             return None
 
     def _generate_encryption_key(self, salt: bytes) -> bytes:
@@ -119,28 +118,87 @@ class OAuth2(AuthABC):
             salt: The salt to use for key derivation
 
         Returns:
-            Base64 encoded key for Fernet
+            Encryption key bytes
         """
-        kdf = PBKDF2HMAC(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=salt,
-            iterations=100000,
+        kdf = hashlib.pbkdf2_hmac(
+            "sha256",
+            self.client_secret.encode(),
+            salt,
+            100000,
         )
-        return base64.urlsafe_b64encode(kdf.derive(self.client_secret.encode()))
+        return kdf
 
-    def _create_fernet_with_salt(self, salt: bytes) -> Fernet:
+    def _encrypt_with_key(self, data: bytes, key: bytes) -> bytes:
         """
-        Create a Fernet instance using the provided salt.
+        Encrypt data using a simple XOR-based encryption with HMAC for integrity.
 
         Args:
-            salt: The salt to use for key derivation
+            data: Data to encrypt
+            key: Encryption key
 
         Returns:
-            Fernet cipher instance
+            Encrypted data with HMAC
         """
-        key = self._generate_encryption_key(salt)
-        return Fernet(key)
+        # Generate a random IV
+        iv = secrets.token_bytes(16)
+
+        # Pad data to be a multiple of 16 bytes
+        padding_length = 16 - (len(data) % 16)
+        padded_data = data + bytes([padding_length] * padding_length)
+
+        # Simple XOR encryption with key cycling
+        encrypted = bytearray()
+        for i, byte in enumerate(padded_data):
+            key_byte = key[i % len(key)]
+            encrypted.append(byte ^ key_byte)
+
+        # Add HMAC for integrity
+        h = hmac.new(key, iv + bytes(encrypted), hashlib.sha256)
+        hmac_digest = h.digest()
+
+        # Return: IV + encrypted_data + HMAC
+        return iv + bytes(encrypted) + hmac_digest
+
+    def _decrypt_with_key(self, encrypted_data: bytes, key: bytes) -> bytes:
+        """
+        Decrypt data using the same XOR-based encryption.
+
+        Args:
+            encrypted_data: Encrypted data with IV and HMAC
+            key: Encryption key
+
+        Returns:
+            Decrypted data
+
+        Raises:
+            ValueError: If HMAC verification fails
+        """
+        if len(encrypted_data) < 48:  # IV(16) + HMAC(32) + at least 1 byte of data
+            raise ValueError("Encrypted data too short")
+
+        # Extract components
+        iv = encrypted_data[:16]
+        hmac_digest = encrypted_data[-32:]
+        encrypted = encrypted_data[16:-32]
+
+        # Verify HMAC
+        h = hmac.new(key, iv + encrypted, hashlib.sha256)
+        expected_hmac = h.digest()
+        if not hmac.compare_digest(hmac_digest, expected_hmac):
+            raise ValueError("HMAC verification failed")
+
+        # Decrypt using XOR
+        decrypted = bytearray()
+        for i, byte in enumerate(encrypted):
+            key_byte = key[i % len(key)]
+            decrypted.append(byte ^ key_byte)
+
+        # Remove padding
+        padding_length = decrypted[-1]
+        if padding_length > 16 or padding_length == 0:
+            raise ValueError("Invalid padding")
+
+        return bytes(decrypted[:-padding_length])
 
     def _generate_state_parameter(self) -> str:
         """
@@ -394,14 +452,15 @@ class OAuth2(AuthABC):
         state_json = json.dumps(state)
         state_bytes = state_json.encode("utf-8")
 
-        if self._fernet is not None:
+        if self._encryption_key is not None:
             # Use fixed encryption key
-            return self._fernet.encrypt(state_bytes)
+            key = hashlib.sha256(self._encryption_key.encode()).digest()
+            return self._encrypt_with_key(state_bytes, key)
         else:
             # Use dynamic encryption with random salt
             salt = secrets.token_bytes(16)
-            fernet = self._create_fernet_with_salt(salt)
-            encrypted_data = fernet.encrypt(state_bytes)
+            key = self._generate_encryption_key(salt)
+            encrypted_data = self._encrypt_with_key(state_bytes, key)
             # Return salt + encrypted data
             return salt + encrypted_data
 
@@ -419,17 +478,18 @@ class OAuth2(AuthABC):
             return {}
 
         try:
-            if self._fernet is not None:
+            if self._encryption_key is not None:
                 # Use fixed encryption key
-                decrypted_data = self._fernet.decrypt(encrypted_data)
+                key = hashlib.sha256(self._encryption_key.encode()).digest()
+                decrypted_data = self._decrypt_with_key(encrypted_data, key)
                 return json.loads(decrypted_data.decode("utf-8"))
             else:
                 # Use dynamic encryption with salt prefix
                 # Try to decrypt with old fixed salt first for backward compatibility
                 try:
                     old_salt = b"cruds_oauth_salt"
-                    fernet = self._create_fernet_with_salt(old_salt)
-                    decrypted_data = fernet.decrypt(encrypted_data)
+                    key = self._generate_encryption_key(old_salt)
+                    decrypted_data = self._decrypt_with_key(encrypted_data, key)
                     return json.loads(decrypted_data.decode("utf-8"))
                 except Exception:
                     # If old salt fails, try new format with salt prefix
@@ -438,11 +498,13 @@ class OAuth2(AuthABC):
                         salt = encrypted_data[:16]
                         actual_encrypted_data = encrypted_data[16:]
 
-                        # Create Fernet instance with the stored salt
-                        fernet = self._create_fernet_with_salt(salt)
+                        # Generate key with the stored salt
+                        key = self._generate_encryption_key(salt)
 
                         # Decrypt the data
-                        decrypted_data = fernet.decrypt(actual_encrypted_data)
+                        decrypted_data = self._decrypt_with_key(
+                            actual_encrypted_data, key
+                        )
                         return json.loads(decrypted_data.decode("utf-8"))
                     else:
                         # Data too short, can't be valid
