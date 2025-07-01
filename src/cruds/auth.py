@@ -173,6 +173,90 @@ class OAuth2(AuthABC):
         self._pending_state = None
         return True
 
+    def _handle_http_response(self, response) -> None:
+        """
+        Handle HTTP response and raise appropriate exceptions for errors.
+
+        Args:
+            response: The HTTP response from urllib3
+
+        Raises:
+            OAuthAccessTokenError: For 4xx client errors
+            urllib3.exceptions.HTTPError: For other HTTP errors
+        """
+        if 400 <= response.status < 499:
+            msg: str = response.json().get("error_description", "Unknown")
+            raise OAuthAccessTokenError(msg)
+
+        if not 200 <= response.status < 299:
+            # Try to decode error message, fallback to raw data
+            try:
+                error_message = response.data.decode("utf-8")
+            except UnicodeDecodeError:
+                error_message = str(response.data)
+
+            raise urllib3.exceptions.HTTPError(
+                f"Error with status code {response.status} Message: {error_message}"
+            )
+
+    def _add_authorization_details(self, params: Dict[str, str]) -> None:
+        """
+        Add authorization details to the parameters if provided.
+
+        Args:
+            params: Dictionary to add authorization details to
+        """
+        if self.authorization_details is not None and isinstance(
+            self.authorization_details, list
+        ):
+            params["authorization_details"] = json.dumps(self.authorization_details)
+        elif self.authorization_details is not None:
+            params["authorization_details"] = self.authorization_details
+
+    def _make_oauth_request(
+        self, fields: Dict[str, str], use_auth: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Make an OAuth request to the token endpoint.
+
+        Args:
+            fields: The form fields to send in the request
+            use_auth: Whether to include basic authentication headers
+
+        Returns:
+            The JSON response from the server
+
+        Raises:
+            OAuthAccessTokenError: For 4xx client errors
+            urllib3.exceptions.HTTPError: For other HTTP errors
+        """
+        # Setup Authentication
+        if use_auth:
+            request_headers = urllib3.make_headers(
+                basic_auth=f"{self.client_id}:{self.client_secret}"
+            )
+        else:
+            request_headers = urllib3.make_headers()
+
+        request_headers["Content-Type"] = (
+            "application/x-www-form-urlencoded; charset=utf-8"
+        )
+
+        # Make request to the token endpoint
+        response = urllib3.request(
+            "POST",
+            self.url,
+            body=urlencode(fields),
+            headers=request_headers,
+            redirect=False,
+        )
+
+        # Handle response
+        self._handle_http_response(response)
+
+        # Return the JSON response
+        return response.json()
+
     def get_authorization_url(
         self, additional_params: Optional[Dict[str, str]] = None
     ) -> str:
@@ -207,12 +291,7 @@ class OAuth2(AuthABC):
         }
 
         # Add authorization details if provided
-        if self.authorization_details is not None and isinstance(
-            self.authorization_details, list
-        ):
-            params["authorization_details"] = json.dumps(self.authorization_details)
-        elif self.authorization_details is not None:
-            params["authorization_details"] = self.authorization_details
+        self._add_authorization_details(params)
 
         # Add additional parameters
         if additional_params:
@@ -253,41 +332,10 @@ class OAuth2(AuthABC):
             "redirect_uri": self.redirect_uri,
         }
 
-        # Setup Authentication
-        request_headers = urllib3.make_headers(
-            basic_auth=f"{self.client_id}:{self.client_secret}"
-        )
-        request_headers["Content-Type"] = (
-            "application/x-www-form-urlencoded; charset=utf-8"
-        )
-
         # Make request to the token endpoint
-        response = urllib3.request(
-            "POST",
-            self.url,
-            body=urlencode(fields),
-            headers=request_headers,
-            redirect=False,
-        )
-
-        # Handle response
-        if 400 <= response.status < 499:
-            msg: str = response.json().get("error_description", "Unknown")
-            raise OAuthAccessTokenError(msg)
-
-        if not 200 <= response.status < 299:
-            # Try to decode error message, fallback to raw data
-            try:
-                error_message = response.data.decode("utf-8")
-            except UnicodeDecodeError:
-                error_message = str(response.data)
-
-            raise urllib3.exceptions.HTTPError(
-                f"Error with status code {response.status} Message: {error_message}"
-            )
+        access_token = self._make_oauth_request(fields)
 
         # Store the token response
-        access_token = response.json()
         access_token["created"] = int(time())
         self._state = access_token
 
@@ -427,62 +475,27 @@ class OAuth2(AuthABC):
                 "grant_type": "refresh_token",
                 "refresh_token": refresh_token,
             }
-            request_headers = urllib3.make_headers()
+            # Refresh token requests don't use basic auth
+            access_token = self._make_oauth_request(fields, use_auth=False)
         else:
             fields = {
                 "grant_type": "client_credentials",
                 "scope": self.scope,
             }
 
-            # Setup Authentication
-            request_headers = urllib3.make_headers(
-                basic_auth=f"{self.client_id}:{self.client_secret}"
-            )
+            # Support Password Grant Type in 2.0
+            if self.username is not None and self.password is not None:
+                fields["grant_type"] = "password"
+                fields["username"] = self.username
+                fields["password"] = self.password
 
-        # Support Password Grant Type in 2.0
-        if self.username is not None and self.password is not None:
-            fields["grant_type"] = "password"
-            fields["username"] = self.username
-            fields["password"] = self.password
+            # Rich Authorization Request (RAR)
+            self._add_authorization_details(fields)
 
-        # Rich Authorization Request (RAR)
-        if self.authorization_details is not None and isinstance(
-            self.authorization_details, list
-        ):
-            fields["authorization_details"] = json.dumps(self.authorization_details)
-        elif self.authorization_details is not None:
-            fields["authorization_details"] = self.authorization_details
+            # Make request to the Server
+            access_token = self._make_oauth_request(fields)
 
-        request_headers["Content-Type"] = (
-            "application/x-www-form-urlencoded; charset=utf-8"
-        )
-
-        # Make request to the Server
-        response = urllib3.request(
-            "POST",
-            self.url,
-            body=urlencode(fields),
-            headers=request_headers,
-            redirect=False,
-        )
-
-        # Confirm status is ok to proceed further
-        if 400 <= response.status < 499:
-            msg: str = response.json().get("error_description", "Unknown")
-            raise OAuthAccessTokenError(msg)
-
-        if not 200 <= response.status < 299:
-            # Try to decode error message, fallback to raw data
-            try:
-                error_message = response.data.decode("utf-8")
-            except UnicodeDecodeError:
-                error_message = str(response.data)
-
-            raise urllib3.exceptions.HTTPError(
-                f"Error with status code {response.status} Message: {error_message}"
-            )
-
-        access_token = response.json()
+        # Store the token response
         access_token["created"] = int(time())
         self._state = access_token
 
