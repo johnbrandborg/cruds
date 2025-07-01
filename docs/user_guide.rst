@@ -92,6 +92,178 @@ issues, retries, and data extraction, our CRUD Client methods simplify the proce
 by only returning the necessary data. In the event of a request issue, an error
 will be raised, ensuring a more efficient and streamlined experience.
 
+Comparison with Other Libraries
+------------------------------
+
+Here are detailed comparisons showing how CRUDs simplifies common API tasks compared to other popular HTTP libraries.
+
+**Basic API Call**
+
+.. code-block:: python
+
+    # With requests
+    import requests
+
+    response = requests.get("https://api.example.com/users/123")
+    response.raise_for_status()
+    user = response.json()
+
+    # With httpx
+    import httpx
+
+    with httpx.Client() as client:
+        response = client.get("https://api.example.com/users/123")
+        response.raise_for_status()
+        user = response.json()
+
+    # With CRUDs
+    import cruds
+
+    api = cruds.Client("https://api.example.com")
+    user = api.read("users/123")
+
+**Authentication**
+
+.. code-block:: python
+
+    # With requests - manual header management
+    import requests
+
+    headers = {"Authorization": "Bearer your-token"}
+    response = requests.get("https://api.example.com/users", headers=headers)
+
+    # With CRUDs - automatic token handling
+    import cruds
+
+    api = cruds.Client("https://api.example.com", auth="your-token")
+    users = api.read("users")
+
+**OAuth2 Authentication**
+
+.. code-block:: python
+
+    # With requests - you need to implement OAuth2 flow yourself
+    import requests
+    from requests_oauthlib import OAuth2Session
+
+    oauth = OAuth2Session(client_id, redirect_uri=redirect_uri)
+    authorization_url, state = oauth.authorization_url(auth_url)
+    # ... handle redirect, get code, exchange for token
+    token = oauth.fetch_token(token_url, client_secret=client_secret)
+
+    response = requests.get("https://api.example.com/users",
+                          headers={"Authorization": f"Bearer {token['access_token']}"})
+
+    # With CRUDs - OAuth2 handled automatically
+    import cruds
+    from cruds.auth import OAuth2
+
+    api = cruds.Client(
+        "https://api.example.com",
+        auth=OAuth2(
+            url="https://api.example.com/oauth/token",
+            client_id="your-client-id",
+            client_secret="your-client-secret",
+            scope="read write"
+        )
+    )
+    users = api.read("users")
+
+**Error Handling and Retries**
+
+.. code-block:: python
+
+    # With requests - manual retry logic
+    import requests
+    from requests.adapters import HTTPAdapter
+    from urllib3.util.retry import Retry
+
+    session = requests.Session()
+    retry_strategy = Retry(
+        total=3,
+        backoff_factor=1,
+        status_forcelist=[429, 500, 502, 503, 504],
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+
+    try:
+        response = session.get("https://api.example.com/users")
+        response.raise_for_status()
+        users = response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Request failed: {e}")
+
+    # With CRUDs - built-in retry logic and error handling
+    import cruds
+
+    api = cruds.Client("https://api.example.com", retries=3)
+    users = api.read("users")  # Automatic retries and error handling
+
+**Complex API Operations**
+
+.. code-block:: python
+
+    # With requests - verbose and error-prone
+    import requests
+
+    # Create user
+    user_data = {"name": "John", "email": "john@example.com"}
+    response = requests.post("https://api.example.com/users", json=user_data)
+    response.raise_for_status()
+    user = response.json()
+
+    # Update user
+    update_data = {"name": "John Doe"}
+    response = requests.patch(f"https://api.example.com/users/{user['id']}", json=update_data)
+    response.raise_for_status()
+
+    # Delete user
+    response = requests.delete(f"https://api.example.com/users/{user['id']}")
+    response.raise_for_status()
+
+    # With CRUDs - clean and semantic
+    import cruds
+
+    api = cruds.Client("https://api.example.com")
+
+    # Create user
+    user = api.create("users", data={"name": "John", "email": "john@example.com"})
+
+    # Update user
+    api.update(f"users/{user['id']}", data={"name": "John Doe"})
+
+    # Delete user
+    api.delete(f"users/{user['id']}")
+
+**Working with Query Parameters**
+
+.. code-block:: python
+
+    # With requests - manual parameter encoding
+    import requests
+    from urllib.parse import urlencode
+
+    params = {
+        "page": 1,
+        "limit": 10,
+        "filter": "active",
+        "sort": "name"
+    }
+    response = requests.get(f"https://api.example.com/users?{urlencode(params)}")
+
+    # With CRUDs - automatic parameter handling
+    import cruds
+
+    api = cruds.Client("https://api.example.com")
+    users = api.read("users", params={
+        "page": 1,
+        "limit": 10,
+        "filter": "active",
+        "sort": "name"
+    })
+
 Method Relationship
 -------------------
 

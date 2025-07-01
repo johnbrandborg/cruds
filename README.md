@@ -19,6 +19,28 @@ communication, automated data processing and interactive environments like Noteb
 <class 'dict'>
 ```
 
+## Why CRUDs?
+
+When working with APIs, you have several options. Here's why CRUDs might be the right choice:
+
+**vs. requests/httpx/urllib3:**
+- **Semantic API Design**: Think about what you're doing (create, read, update, delete) instead of HTTP methods
+- **Production-Ready**: Built-in retry logic, error handling, and logging without configuration
+- **Simplified Auth**: OAuth2, bearer tokens, and basic auth handled automatically
+- **Data-First**: Returns Python data structures directly instead of response objects
+
+**vs. SDKs for specific APIs:**
+- **Consistent Interface**: Same patterns across all APIs
+- **No Vendor Lock-in**: Switch between APIs without learning new patterns
+- **Lightweight**: No need for multiple heavy SDKs
+- **Customizable**: Full control while maintaining simplicity
+
+**Perfect for:**
+- Data engineers working with multiple APIs
+- Backend developers building integrations
+- Data scientists in notebooks
+- DevOps teams automating API interactions
+
 Make Create, Read, Update and Delete operations quickly, easily, and safely. CRUDs
 aims to implement URLLib3's best practises while remaining as light as possible.
 
