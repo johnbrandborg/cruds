@@ -84,11 +84,18 @@ def bulk_upsert_response_check(self) -> None:
 
 
 @staticmethod
-def _sum_bulk_upsert_responses(total: dict, response: dict) -> None:
+def _sum_bulk_upsert_responses(total: dict, response: Union[dict, bytes]) -> None:
     """
     Takes two Dictionaries and sums or extends the values in the response into the
     total using common keys.  Only the first level is processed.
+    
+    If response is bytes (non-JSON), it will be ignored as it cannot be merged.
     """
+    # Skip processing if response is not a dictionary (e.g., bytes)
+    if not isinstance(response, dict):
+        logger.debug(f"Skipping non-dict response: {type(response)}")
+        return
+        
     for key in response:
         if key in total and isinstance(response[key], (tuple, list, int, float)):
             total[key] = total[key] + response[key]
