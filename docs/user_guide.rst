@@ -1,3 +1,5 @@
+.. _user_guide:
+
 ============
 Installation
 ============
@@ -34,7 +36,7 @@ General Usage
 
 Unlike other HTTP packages that require the full URL and methods as arguments with
 every request, with CRUDs the object you create is a representation of a platform
-interface.  In it's most basic from only the host name is required when creating
+interface.  In its most basic form only the host name is required when creating
 your client instance.
 
 .. code-block:: python
@@ -92,8 +94,10 @@ issues, retries, and data extraction, our CRUD Client methods simplify the proce
 by only returning the necessary data. In the event of a request issue, an error
 will be raised, ensuring a more efficient and streamlined experience.
 
+.. _comparison-with-other-libraries:
+
 Comparison with Other Libraries
-------------------------------
+-------------------------------
 
 Here are detailed comparisons showing how CRUDs simplifies common API tasks compared to other popular HTTP libraries.
 
@@ -413,7 +417,7 @@ and the returned data is the same.
 
 The API however needs to indicate the content type is JSON! If not the Client will
 attempt to return JSON, and will fall-back to returning the bytes type data if
-deserialization fails, pressuming that ``serialize`` is enabled by mistake.
+deserialization fails, presuming that ``serialize`` is enabled by mistake.
 
 If the Client has serialization disabled only the string or byte types are taken
 as data, and the return is bytes type data.

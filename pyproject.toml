@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "cruds"
 dynamic = ["version"]
-description = "CRUDs is a high level library for API's, and is ideal for automation system and/or interactive environments like Notebooks"
+description = "A lightweight Python client for REST APIs — create, read, update, and delete with zero boilerplate"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"

@@ -1,6 +1,29 @@
 Changelog
 =========
 
+Release 1.5.0 (February 20, 2026)
+----------------------------------
+
+Updates:
+ - Modernized project tooling: migrated from setup.cfg/setup.py to pyproject.toml
+   and adopted uv for dependency management.
+ - Aligned urllib3 usage with current best practices.
+ - Updated SonarQube scan action from v4 to v6.
+ - Minimum supported Python version is now 3.10.
+
+Release 1.4.2 (September 9, 2025)
+----------------------------------
+
+Fixes:
+ - Enhanced response handling in Planhat bulk upsert logic to skip non-dictionary
+   types.
+
+Release 1.4.1 (July 1, 2025)
+-----------------------------
+
+Fixes:
+ - Version bump to resolve PyPI version conflict with 1.4.0.
+
 Release 1.4.0 (June 30, 2025)
 ------------------------------
 
