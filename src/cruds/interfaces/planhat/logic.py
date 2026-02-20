@@ -2,7 +2,8 @@ from copy import deepcopy
 from datetime import datetime
 from logging import getLogger
 from time import sleep
-from typing import Any, Dict, Generator, List, Union
+from collections.abc import Generator
+from typing import Any
 
 from cruds.core import Client
 from .exception import PlanhatUpsertError
@@ -84,18 +85,18 @@ def bulk_upsert_response_check(self) -> None:
 
 
 @staticmethod
-def _sum_bulk_upsert_responses(total: dict, response: Union[dict, bytes]) -> None:
+def _sum_bulk_upsert_responses(total: dict, response: dict | bytes) -> None:
     """
     Takes two Dictionaries and sums or extends the values in the response into the
     total using common keys.  Only the first level is processed.
-    
+
     If response is bytes (non-JSON), it will be ignored as it cannot be merged.
     """
     # Skip processing if response is not a dictionary (e.g., bytes)
     if not isinstance(response, dict):
         logger.debug(f"Skipping non-dict response: {type(response)}")
         return
-        
+
     for key in response:
         if key in total and isinstance(response[key], (tuple, list, int, float)):
             total[key] = total[key] + response[key]
@@ -126,7 +127,7 @@ def bulk_upsert(
     self,
     data: list,
     chunk_size=5000,
-) -> Dict[str, Union[int, List[str]]]:
+) -> dict[str, int | list[str]]:
     """
     Takes data in form of JSON and updates entries already in PlanHat.
     (Limit of 5,000 items per request)
@@ -176,7 +177,7 @@ def get_by_id(self, identification) -> dict:
     return self._owner.client.read(f"{self._uri}/{identification}")
 
 
-def get_lean_list(self, external_id=None, source_id=None, status=None) -> List[dict]:
+def get_lean_list(self, external_id=None, source_id=None, status=None) -> list[dict]:
     """
     When you need a lightweight list of all companies in Planhat to match against
     your own ids etc.
@@ -210,8 +211,8 @@ def get_lean_list(self, external_id=None, source_id=None, status=None) -> List[d
 
 def get_dimension_data(
     self,
-    from_day: Union[int, str],
-    to_day: Union[int, str],
+    from_day: int | str,
+    to_day: int | str,
     company_id=None,
     dimension_id=None,
     limit=10000,
@@ -229,7 +230,7 @@ def get_dimension_data(
     """
     limit = max(limit, 1)
 
-    params: Dict[str, Any] = {
+    params: dict[str, Any] = {
         "from": self.epoc_days_format(from_day)
         if isinstance(from_day, str)
         else from_day,
@@ -258,7 +259,7 @@ def get_list(
     Creates a generator that retrieves yields the data as Dictionaries
     Select can be an empty string, but defaults to those fields needed for creation.
     """
-    params: Dict[str, Union[str, int]] = {
+    params: dict[str, str | int] = {
         "sort": sort,
         "select": select,
         "limit": max(limit, 1),
@@ -333,7 +334,7 @@ def bulk_insert_metrics(self, data: Any, auto_chunk=True) -> dict:
 
 
 def calculate_metric_chunk_size(
-    data: list, sample_per=1000, max_bytes=32 * (1024**2), reduction=10
+    data: list | dict, sample_per=1000, max_bytes=32 * (1024**2), reduction=10
 ) -> int:
     """
     Determines the chunk size of a list of JSON objects to be sent to an API,
@@ -380,7 +381,7 @@ def calculate_metric_chunk_size(
 
 def create_activity(
     self, data: Any, bulk=False, auto_chunk=True
-) -> Union[Dict[Any, Any], bytes]:
+) -> dict[Any, Any] | bytes:
     """
     Creates user activity.  Required data keys are email or externalId.
     Ensure you create the PlanHat instance with analytics set to True.
@@ -424,7 +425,7 @@ def create_activity(
     )
 
 
-def segment(self, data, auto_chunk=True) -> Union[Dict[Any, Any], bytes]:
+def segment(self, data, auto_chunk=True) -> dict[Any, Any] | bytes:
     """
     Segment can be used to send User Events (user tracking data) to Planhat.
     Required data keys are type, and trait.  trait is an object.

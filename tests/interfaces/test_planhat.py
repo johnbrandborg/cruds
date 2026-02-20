@@ -12,7 +12,7 @@ from unittest import mock
 import pytest
 
 from cruds import Client
-from cruds.interfaces.planhat import Planhat
+from cruds.interfaces.planhat import Planhat  # ty: ignore[unresolved-import]
 from cruds.interfaces.planhat.logic import (
     _get_all_data,
     _sum_bulk_upsert_responses,
@@ -111,6 +111,8 @@ def planhat():
 @pytest.fixture
 def planhat_model():
     class Model:
+        _owner: Any
+        _uri: str
         __init__ = model_init
         _get_all_data = _get_all_data
         _sum_bulk_upsert_responses = _sum_bulk_upsert_responses

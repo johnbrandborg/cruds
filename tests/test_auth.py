@@ -269,7 +269,10 @@ def test_OAuth2_exchange_code_for_token():
         status=200,
     )
 
-    with mock.patch("urllib3.request", return_value=mock_resp) as mock_request:
+    assert pending_state is not None
+    with mock.patch.object(
+        auth._http, "request", return_value=mock_resp
+    ) as mock_request:
         token = auth.exchange_code_for_token(authorization_code, pending_state)
 
     assert token == access_token
@@ -347,7 +350,8 @@ def test_OAuth2_state_parameter_reuse_prevention():
         status=200,
     )
 
-    with mock.patch("urllib3.request", return_value=mock_resp):
+    assert pending_state is not None
+    with mock.patch.object(auth._http, "request", return_value=mock_resp):
         # First use should succeed
         auth.exchange_code_for_token(authorization_code, pending_state)
 
@@ -495,7 +499,7 @@ def test_OAuth2_access_token_cached():
 
     assert auth.is_valid()
 
-    with mock.patch("urllib3.request") as mock_request:
+    with mock.patch.object(auth._http, "request") as mock_request:
         token: str = auth.access_token()
 
     assert token == access_token
@@ -519,7 +523,9 @@ def test_OAuth2_access_token_request():
         status=200,
     )
 
-    with mock.patch("urllib3.request", return_value=mock_resp) as mock_request:
+    with mock.patch.object(
+        auth._http, "request", return_value=mock_resp
+    ) as mock_request:
         token: str = auth.access_token()
 
     assert token == access_token
@@ -556,7 +562,9 @@ def test_OAuth2_access_token_request_with_password_grant_type():
         status=200,
     )
 
-    with mock.patch("urllib3.request", return_value=mock_resp) as mock_request:
+    with mock.patch.object(
+        auth._http, "request", return_value=mock_resp
+    ) as mock_request:
         token: str = auth.access_token()
 
     assert token == access_token
@@ -590,7 +598,9 @@ def test_OAuth2_access_token_refresh():
         status=200,
     )
 
-    with mock.patch("urllib3.request", return_value=mock_resp) as mock_request:
+    with mock.patch.object(
+        auth._http, "request", return_value=mock_resp
+    ) as mock_request:
         token: str = auth.access_token()
 
     assert token == access_token
@@ -606,7 +616,9 @@ def test_OAuth2_access_token_refresh():
     }
     auth._state = expired_state
 
-    with mock.patch("urllib3.request", return_value=mock_resp) as mock_request:
+    with mock.patch.object(
+        auth._http, "request", return_value=mock_resp
+    ) as mock_request:
         token: str = auth.access_token()
 
     assert token == access_token
@@ -633,8 +645,8 @@ def test_OAuth2_access_token_400_error():
         scope="api",
     )
     mock_resp = HTTPResponse(b'{"error_description": "Bad Request"}', status=400)
-    mock_resp.json = lambda: {"error_description": "Bad Request"}
-    with mock.patch("urllib3.request", return_value=mock_resp):
+    mock_resp.json = lambda: {"error_description": "Bad Request"}  # ty: ignore[invalid-assignment]
+    with mock.patch.object(auth._http, "request", return_value=mock_resp):
         with pytest.raises(OAuthAccessTokenError):
             auth.access_token()
 
@@ -650,8 +662,8 @@ def test_OAuth2_access_token_non_2xx_error():
         scope="api",
     )
     mock_resp = HTTPResponse(b"Internal Error", status=500)
-    mock_resp.json = lambda: {}
-    with mock.patch("urllib3.request", return_value=mock_resp):
+    mock_resp.json = lambda: {}  # ty: ignore[invalid-assignment]
+    with mock.patch.object(auth._http, "request", return_value=mock_resp):
         with pytest.raises(urllib3.exceptions.HTTPError):
             auth.access_token()
 
@@ -668,7 +680,9 @@ def test_OAuth2_access_token_with_authorization_details_list():
         authorization_details=[{"type": "test"}],
     )
     mock_resp = HTTPResponse(access_token_response, status=200)
-    with mock.patch("urllib3.request", return_value=mock_resp) as mock_request:
+    with mock.patch.object(
+        auth._http, "request", return_value=mock_resp
+    ) as mock_request:
         token = auth.access_token()
     assert token == access_token
     assert "authorization_details" in mock_request.call_args[1]["body"]
@@ -686,7 +700,9 @@ def test_OAuth2_access_token_with_authorization_details_str():
         authorization_details="test-string",
     )
     mock_resp = HTTPResponse(access_token_response, status=200)
-    with mock.patch("urllib3.request", return_value=mock_resp) as mock_request:
+    with mock.patch.object(
+        auth._http, "request", return_value=mock_resp
+    ) as mock_request:
         token = auth.access_token()
     assert token == access_token
     assert "authorization_details" in mock_request.call_args[1]["body"]
@@ -748,7 +764,7 @@ def test_OAuth2_access_token_unicode_decode_error():
         status=500,
     )
 
-    with mock.patch("urllib3.request", return_value=mock_resp):
+    with mock.patch.object(auth._http, "request", return_value=mock_resp):
         with pytest.raises(urllib3.exceptions.HTTPError) as exc_info:
             auth.access_token()
 
@@ -772,7 +788,7 @@ def test_OAuth2_access_token_utf8_error_message():
     error_message = "Invalid client credentials"
     mock_resp = HTTPResponse(body=error_message.encode("utf-8"), status=500)
 
-    with mock.patch("urllib3.request", return_value=mock_resp):
+    with mock.patch.object(auth._http, "request", return_value=mock_resp):
         with pytest.raises(urllib3.exceptions.HTTPError) as exc_info:
             auth.access_token()
 
@@ -862,11 +878,12 @@ def test_OAuth2_exchange_code_for_token_400_error():
     # Generate authorization URL to set pending state
     auth.get_authorization_url()
     pending_state = auth._pending_state
+    assert pending_state is not None
     mock_resp = HTTPResponse(
         b'{"error_description": "Invalid authorization code"}', status=400
     )
-    mock_resp.json = lambda: {"error_description": "Invalid authorization code"}
-    with mock.patch("urllib3.request", return_value=mock_resp):
+    mock_resp.json = lambda: {"error_description": "Invalid authorization code"}  # ty: ignore[invalid-assignment]
+    with mock.patch.object(auth._http, "request", return_value=mock_resp):
         with pytest.raises(OAuthAccessTokenError, match="Invalid authorization code"):
             auth.exchange_code_for_token(authorization_code, pending_state)
 
@@ -886,8 +903,9 @@ def test_OAuth2_exchange_code_for_token_500_error():
     # Generate authorization URL to set pending state
     auth.get_authorization_url()
     pending_state = auth._pending_state
+    assert pending_state is not None
     mock_resp = HTTPResponse(b"Internal Server Error", status=500)
-    with mock.patch("urllib3.request", return_value=mock_resp):
+    with mock.patch.object(auth._http, "request", return_value=mock_resp):
         with pytest.raises(urllib3.exceptions.HTTPError):
             auth.exchange_code_for_token(authorization_code, pending_state)
 
@@ -907,12 +925,13 @@ def test_OAuth2_exchange_code_for_token_missing_access_token():
     # Generate authorization URL to set pending state
     auth.get_authorization_url()
     pending_state = auth._pending_state
+    assert pending_state is not None
     # Response without access_token
     mock_resp = HTTPResponse(
         json.dumps({"token_type": "Bearer", "expires_in": 3600}).encode("utf-8"),
         status=200,
     )
-    with mock.patch("urllib3.request", return_value=mock_resp):
+    with mock.patch.object(auth._http, "request", return_value=mock_resp):
         token = auth.exchange_code_for_token(authorization_code, pending_state)
         assert token == ""  # Should return empty string when access_token is missing
 
@@ -1004,7 +1023,7 @@ def test_OAuth2_access_token_refresh_with_new_refresh_token():
         }
     ).encode("utf-8")
     mock_resp = HTTPResponse(refresh_response, status=200)
-    with mock.patch("urllib3.request", return_value=mock_resp):
+    with mock.patch.object(auth._http, "request", return_value=mock_resp):
         token = auth.access_token()
     assert token == access_token
     assert auth._state["refresh_token"] == new_refresh_token
@@ -1041,7 +1060,7 @@ def test_OAuth2_access_token_refresh_without_new_refresh_token():
         }
     ).encode("utf-8")
     mock_resp = HTTPResponse(refresh_response, status=200)
-    with mock.patch("urllib3.request", return_value=mock_resp):
+    with mock.patch.object(auth._http, "request", return_value=mock_resp):
         token = auth.access_token()
     assert token == access_token
     assert "refresh_token" not in auth._state
@@ -1061,7 +1080,9 @@ def test_OAuth2_access_token_password_grant_with_authorization_details():
         authorization_details=[{"type": "permissions", "operation": "read"}],
     )
     mock_resp = HTTPResponse(access_token_response, status=200)
-    with mock.patch("urllib3.request", return_value=mock_resp) as mock_request:
+    with mock.patch.object(
+        auth._http, "request", return_value=mock_resp
+    ) as mock_request:
         token = auth.access_token()
     assert token == access_token
     request_body = mock_request.call_args[1]["body"]
@@ -1081,7 +1102,9 @@ def test_OAuth2_access_token_client_credentials_with_authorization_details():
         authorization_details="custom-auth-details",
     )
     mock_resp = HTTPResponse(access_token_response, status=200)
-    with mock.patch("urllib3.request", return_value=mock_resp) as mock_request:
+    with mock.patch.object(
+        auth._http, "request", return_value=mock_resp
+    ) as mock_request:
         token = auth.access_token()
     assert token == access_token
     request_body = mock_request.call_args[1]["body"]
@@ -1153,6 +1176,7 @@ def test_OAuth2_validate_state_parameter_success():
     )
     auth.get_authorization_url()
     original_state = auth._pending_state
+    assert original_state is not None
     assert auth._validate_state_parameter(original_state)
     assert auth._pending_state is None
 
@@ -1259,7 +1283,7 @@ def test_OAuth2_access_token_returns_empty_string_on_invalid():
     mock_response.status = 200
     mock_response.json.return_value = {"token_type": "Bearer", "expires_in": 60}
     mock_response.data = b"invalid response"
-    with mock.patch("urllib3.request", return_value=mock_response):
+    with mock.patch.object(auth._http, "request", return_value=mock_response):
         with pytest.raises(
             RuntimeError, match="Auth state is missing critical information"
         ):
@@ -1302,6 +1326,7 @@ def test_OAuth2_exchange_code_for_token_unicode_decode_error():
     )
     auth.get_authorization_url()
     state = auth._pending_state
+    assert state is not None
 
     class MockResponse:
         status = 500
@@ -1313,7 +1338,7 @@ def test_OAuth2_exchange_code_for_token_unicode_decode_error():
     def mock_request(*args, **kwargs):
         return MockResponse()
 
-    with mock.patch("urllib3.request", mock_request):
+    with mock.patch.object(auth._http, "request", mock_request):
         with pytest.raises(urllib3.exceptions.HTTPError) as exc_info:
             auth.exchange_code_for_token("code", state)
 
@@ -1337,7 +1362,7 @@ def test_OAuth2_access_token_unicode_decode_error_in_main_flow():
     mock_response.status = 500
     mock_response.data = b"\xff\xfe\xfd"
     mock_response.json.side_effect = Exception("JSON decode failed")
-    with mock.patch("urllib3.request", return_value=mock_response):
+    with mock.patch.object(auth._http, "request", return_value=mock_response):
         with pytest.raises(urllib3.exceptions.HTTPError) as exc_info:
             auth.access_token()
 

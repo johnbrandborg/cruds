@@ -4,7 +4,7 @@ Tests for the main Interface in CRUDs
 
 from copy import deepcopy
 import importlib
-from typing import Dict
+from typing import Any
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
@@ -54,7 +54,7 @@ def test_ModelFactory_descriptor_set(interface):
 
     interface.test = "check"
     assert dir(interface.test) == snapshot_attributes
-    assert interface.test.echo("foo") == "bar"
+    assert interface.test.echo("foo") == "bar"  # ty: ignore[unresolved-attribute]
 
 
 def test_ModelFactory_descriptor_setup(interface):
@@ -102,7 +102,7 @@ def test__create_interface_v1_with_package_and_models(monkeypatch):
     """
 
     class MockPackage:
-        __dict__: Dict[str, object] = {
+        __dict__: dict[str, Any] = {
             "__init__": lambda _: None,
             "echo": lambda _, x: "bar" if x == "foo" else "baz",
         }

@@ -7,8 +7,9 @@ import logging
 import secrets
 from time import time
 from urllib.parse import urlencode, parse_qs, urlparse
-from typing import Dict, Any, Optional, Tuple
+from typing import Any
 
+import certifi
 import urllib3
 import hashlib
 import hmac
@@ -36,10 +37,10 @@ class OAuth2(AuthABC):
         authorization_details=None,
         username=None,
         password=None,
-        encryption_key: Optional[str] = None,
+        encryption_key: str | None = None,
         # Authorization Code flow parameters
-        authorization_url: Optional[str] = None,
-        redirect_uri: Optional[str] = None,
+        authorization_url: str | None = None,
+        redirect_uri: str | None = None,
         state_length: int = 32,
     ) -> None:
         """
@@ -81,17 +82,15 @@ class OAuth2(AuthABC):
         self.state_length = state_length
 
         # Initialize encryption
-        self._encryption_key: Optional[str] = self._initialize_encryption(
-            encryption_key
-        )
+        self._encryption_key: str | None = self._initialize_encryption(encryption_key)
         self._encrypted_state = b""
 
-        # State parameter for CSRF protection
-        self._pending_state: Optional[str] = None
+        self._http = urllib3.PoolManager(ca_certs=certifi.where())
 
-    def _initialize_encryption(
-        self, encryption_key: Optional[str] = None
-    ) -> Optional[str]:
+        # State parameter for CSRF protection
+        self._pending_state: str | None = None
+
+    def _initialize_encryption(self, encryption_key: str | None = None) -> str | None:
         """
         Initialize encryption using provided key.
 
@@ -242,7 +241,7 @@ class OAuth2(AuthABC):
             OAuthAccessTokenError: For 4xx client errors
             urllib3.exceptions.HTTPError: For other HTTP errors
         """
-        if 400 <= response.status < 499:
+        if 400 <= response.status < 500:
             msg: str = response.json().get("error_description", "Unknown")
             raise OAuthAccessTokenError(msg)
 
@@ -257,7 +256,7 @@ class OAuth2(AuthABC):
                 f"Error with status code {response.status} Message: {error_message}"
             )
 
-    def _add_authorization_details(self, params: Dict[str, str]) -> None:
+    def _add_authorization_details(self, params: dict[str, str]) -> None:
         """
         Add authorization details to the parameters if provided.
 
@@ -272,8 +271,8 @@ class OAuth2(AuthABC):
             params["authorization_details"] = self.authorization_details
 
     def _make_oauth_request(
-        self, fields: Dict[str, str], use_auth: bool = True
-    ) -> Dict[str, Any]:
+        self, fields: dict[str, str], use_auth: bool = True
+    ) -> dict[str, Any]:
         """
         Make an OAuth request to the token endpoint.
 
@@ -301,7 +300,7 @@ class OAuth2(AuthABC):
         )
 
         # Make request to the token endpoint
-        response = urllib3.request(
+        response = self._http.request(
             "POST",
             self.url,
             body=urlencode(fields),
@@ -316,7 +315,7 @@ class OAuth2(AuthABC):
         return response.json()
 
     def get_authorization_url(
-        self, additional_params: Optional[Dict[str, str]] = None
+        self, additional_params: dict[str, str] | None = None
     ) -> str:
         """
         Generate the authorization URL for the Authorization Code flow.
@@ -383,8 +382,11 @@ class OAuth2(AuthABC):
 
         logger.debug("Exchanging authorization code for access token")
 
+        if not self.redirect_uri:
+            raise RuntimeError("redirect_uri is required for Authorization Code flow")
+
         # Prepare token exchange request
-        fields = {
+        fields: dict[str, str] = {
             "grant_type": "authorization_code",
             "code": authorization_code,
             "redirect_uri": self.redirect_uri,
@@ -400,7 +402,7 @@ class OAuth2(AuthABC):
         logger.debug("Successfully exchanged authorization code for access token")
         return access_token.get("access_token", "")
 
-    def parse_authorization_response(self, redirect_url: str) -> Tuple[str, str]:
+    def parse_authorization_response(self, redirect_url: str) -> tuple[str, str]:
         """
         Parse the authorization response from the redirect URL.
 
@@ -436,7 +438,7 @@ class OAuth2(AuthABC):
 
         return authorization_code, state
 
-    def _encrypt_state(self, state: Dict[str, Any]) -> bytes:
+    def _encrypt_state(self, state: dict[str, Any]) -> bytes:
         """
         Encrypt the state dictionary with a random salt.
 
@@ -464,7 +466,7 @@ class OAuth2(AuthABC):
             # Return salt + encrypted data
             return salt + encrypted_data
 
-    def _decrypt_state(self, encrypted_data: bytes) -> Dict[str, Any]:
+    def _decrypt_state(self, encrypted_data: bytes) -> dict[str, Any]:
         """
         Decrypt the state dictionary using the stored salt.
 
@@ -514,14 +516,14 @@ class OAuth2(AuthABC):
             return {}
 
     @property
-    def _state(self) -> Dict[str, Any]:
+    def _state(self) -> dict[str, Any]:
         """Get decrypted state."""
         return self._decrypt_state(self._encrypted_state)
 
     @_state.setter
-    def _state(self, value: Dict[str, Any]) -> None:
+    def _state(self, value: dict[str, Any] | None) -> None:
         """Set encrypted state."""
-        self._encrypted_state = self._encrypt_state(value)
+        self._encrypted_state = self._encrypt_state(value or {})
 
     def access_token(self) -> str:
         if self.is_valid():

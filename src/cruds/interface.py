@@ -1,7 +1,8 @@
 import importlib
 from logging import getLogger
 import os
-from typing import Any, Callable, List, Union
+from collections.abc import Callable
+from typing import Any
 
 from jsonschema import validate
 import yaml
@@ -73,7 +74,7 @@ def _create_interfaces_v1(config: dict):
         models: dict[str, object] = {}
 
         for model in api.get("models") or []:
-            method_list: List[str] = []
+            method_list: list[str] = []
 
             if api.get("required_model_methods"):
                 method_list += api["required_model_methods"]
@@ -94,7 +95,7 @@ def _create_interfaces_v1(config: dict):
                 methods=method_map,
             )
 
-        interface_methods: dict[str, Union[Callable, None]] = {
+        interface_methods: dict[str, Callable | None] = {
             name: interface_code.get(name)
             for name in api.get("methods") or ["__init__"]
         }
