@@ -1,13 +1,12 @@
-.. CRUDs documentation master file, created by
-   sphinx-quickstart on Thu Aug  8 10:58:11 2024.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-====
+=====
 CRUDs
-====
+=====
 
 Release v\ |version|
+
+.. image:: https://img.shields.io/pypi/v/cruds
+    :target: https://pypi.org/project/cruds/
+    :alt: PyPI Version
 
 .. image:: https://img.shields.io/pypi/pyversions/cruds?logo=python&logoColor=FFE873
     :target: https://pypi.org/project/cruds/
@@ -16,6 +15,14 @@ Release v\ |version|
 .. image:: https://img.shields.io/pypi/dm/cruds
     :target: https://pypistats.org/packages/cruds
     :alt: PyPI downloads
+
+.. image:: https://github.com/johnbrandborg/cruds/actions/workflows/development.yml/badge.svg
+    :target: https://github.com/johnbrandborg/cruds/actions/workflows/development.yml
+    :alt: CI Status
+
+.. image:: https://readthedocs.org/projects/cruds/badge/?version=latest
+    :target: https://cruds.readthedocs.io/en/latest/
+    :alt: Documentation Status
 
 .. image:: https://img.shields.io/pypi/l/cruds.svg
     :target: https://github.com/johnbrandborg/cruds/blob/main/LICENSE
@@ -29,7 +36,9 @@ and delete with zero boilerplate.
 Quickstart
 ----------
 
-Install from PyPI::
+Install from PyPI:
+
+.. code-block:: console
 
     $ pip install cruds
 
@@ -110,13 +119,10 @@ User Guide
 API Reference
 -------------
 
-For developers searching for information relating more closely to code
-
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
 
-   modules
+   api
 
 Indices and tables
 ==================
