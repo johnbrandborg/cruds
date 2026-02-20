@@ -3,13 +3,10 @@ Clients that can be used for easily accessing RESTful APIs
 """
 
 import abc
-from base64 import b64encode
 import logging
 from json.decoder import JSONDecodeError
 import sys
-from typing import Final
-
-from typing import Any, Dict, Union
+from typing import Any, Final
 from urllib.parse import urlencode
 
 import certifi
@@ -144,6 +141,9 @@ class Client:
                     total=retries,
                     status_forcelist=retry_status_codes,
                     backoff_factor=backoff_factor,
+                    allowed_methods=frozenset(
+                        {"GET", "POST", "PUT", "PATCH", "DELETE"}
+                    ),
                 )
             else:
                 logger.info("Retries: Disabled")
@@ -151,6 +151,7 @@ class Client:
 
             # Create PoolManager
             self.manager = urllib3.PoolManager(
+                cert_reqs="CERT_REQUIRED" if verify_ssl else "CERT_NONE",
                 ca_certs=certifi.where() if verify_ssl else None,
                 retries=retry_config,
                 timeout=urllib3.Timeout(connect=timeout, read=timeout),
@@ -163,9 +164,9 @@ class Client:
             self.request_headers.add("Authorization", f"Bearer {auth}")
             logger.info("Token authentication setup")
         elif isinstance(auth, (list, tuple)) and len(auth) == 2:
+            basic_auth_header = urllib3.make_headers(basic_auth=f"{auth[0]}:{auth[1]}")
             self.request_headers.add(
-                "Authorization",
-                "Basic " + b64encode(":".join(auth).encode("UTF-8")).decode("UTF-8"),
+                "Authorization", basic_auth_header["authorization"]
             )
             logger.info("Basic authentication setup")
         elif isinstance(auth, AuthABC):
@@ -179,8 +180,8 @@ class Client:
         self,
         uri: str,
         data: dict,
-        params: Union[Dict[Any, Any], None] = None,
-    ) -> Union[Dict[Any, Any], bytes]:
+        params: dict[Any, Any] | None = None,
+    ) -> dict[Any, Any] | bytes:
         """
         Makes a basic Create request to the API, and returns the response.
 
@@ -224,8 +225,8 @@ class Client:
     def read(
         self,
         uri: str,
-        params: Union[Dict[Any, Any], None] = None,
-    ) -> Union[Dict[Any, Any], bytes]:
+        params: dict[Any, Any] | None = None,
+    ) -> dict[Any, Any] | bytes:
         """
         Makes a basic Retrieve request to the API, and returns the response
 
@@ -255,10 +256,10 @@ class Client:
     def update(
         self,
         uri: str,
-        data: Union[Dict[Any, Any], str],
-        params: Union[Dict[Any, Any], None] = None,
+        data: dict[Any, Any] | str,
+        params: dict[Any, Any] | None = None,
         replace: bool = False,
-    ) -> Union[Dict[Any, Any], bytes]:
+    ) -> dict[Any, Any] | bytes:
         """
         Makes a basic Update request to the API, and returns the response.
 
@@ -302,8 +303,8 @@ class Client:
         return self._process_resp(method, response)
 
     def delete(
-        self, uri: str, params: Union[Dict[Any, Any], None] = None
-    ) -> Union[Dict[Any, Any], bytes]:
+        self, uri: str, params: dict[Any, Any] | None = None
+    ) -> dict[Any, Any] | bytes:
         """
         Makes a basic Delete request to the API, and returns the response
 
@@ -324,7 +325,7 @@ class Client:
 
         self._check_auth()
         response = self.manager.request(
-            method, self.host + uri, fields=params, headers=self.request_headers
+            method, url, fields=params, headers=self.request_headers
         )
         return self._process_resp(method, response)
 
@@ -332,7 +333,7 @@ class Client:
         self,
         method: str,
         response: urllib3.response.BaseHTTPResponse,
-    ) -> Union[Dict[Any, Any], bytes]:
+    ) -> dict[Any, Any] | bytes:
         """
         Processes the Response from URLLib3 request in a standardized manner, and
         displays information.

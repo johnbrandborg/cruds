@@ -51,6 +51,7 @@ def test_Client_disable_retries():
     """Setting the retries to 0 or None will disable retries being used"""
     api = cruds.Client(host="https://localhost", retries=0)
     retries = api.manager.connection_pool_kw.get("retries")
+    assert retries is not None
     assert retries.total is False
     assert retries.connect is None
     assert retries.read is None
@@ -59,6 +60,7 @@ def test_Client_disable_retries():
 
     api = cruds.Client(host="https://localhost", retries=None)
     retries = api.manager.connection_pool_kw.get("retries")
+    assert retries is not None
     assert retries.total is False
     assert retries.connect is None
     assert retries.read is None
@@ -73,8 +75,8 @@ def crud_api():
     """
     api = cruds.Client(host="https://localhost", retries=0)
     mock_resp = urllib3.HTTPResponse(body=b'{"name": "test"}')
-    api.manager.request = mock.Mock(return_value=mock_resp)
-    api._process_resp = lambda method, resp: resp
+    api.manager.request = mock.Mock(return_value=mock_resp)  # ty: ignore[invalid-assignment]
+    api._process_resp = lambda method, resp: resp  # ty: ignore[invalid-assignment]
     return api
 
 
@@ -329,7 +331,7 @@ def test_Client_ssl_configuration_verify_ssl_true():
     Test that SSL verification is properly configured when verify_ssl=True.
     """
     api = cruds.Client(host="https://localhost", verify_ssl=True)
-    # Check that ca_certs is set when verify_ssl is True
+    assert api.manager.connection_pool_kw.get("cert_reqs") == "CERT_REQUIRED"
     assert api.manager.connection_pool_kw.get("ca_certs") is not None
 
 
@@ -338,7 +340,7 @@ def test_Client_ssl_configuration_verify_ssl_false():
     Test that SSL verification is properly configured when verify_ssl=False.
     """
     api = cruds.Client(host="https://localhost", verify_ssl=False)
-    # Check that ca_certs is None when verify_ssl is False
+    assert api.manager.connection_pool_kw.get("cert_reqs") == "CERT_NONE"
     assert api.manager.connection_pool_kw.get("ca_certs") is None
 
 
@@ -458,7 +460,7 @@ def test_Client_process_resp_empty_response():
     api = cruds.Client(host="https://localhost")
     # Create a mock response with None data to simulate empty response
     mock_resp = urllib3.HTTPResponse(
-        body=None,  # Use None to simulate empty response
+        body=None,  # ty: ignore[invalid-argument-type]
         headers={"Content-Type": "application/json; charset=utf-8"},
         status=200,
     )

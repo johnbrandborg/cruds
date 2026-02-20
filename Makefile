@@ -4,35 +4,34 @@ help:  # Displays the help menu with all the targets
 		done
 
 apidocs:  # Creates API documentation for RTDs
-	@sphinx-apidoc -f -o docs cruds/
+	@uv run sphinx-apidoc -f -o docs cruds/
 
-develop:  update-pip  # Installs all requirements and testing requirements
-	@python -m pip install -e '.[develop]' \
-		&& pre-commit install
+develop:  # Installs all requirements and testing requirements
+	@uv sync --group dev \
+		&& uv run pre-commit install
 
 test:  # Perform unit testing on the source code
-	@python -m pytest -vvv
+	@uv run pytest -vvv
 
 test-report:  # Perform unit testing on the source code with a coverage report
-	@python -m pytest --cov-report=xml
+	@uv run pytest --cov-report=xml
 
 lint:  # Quality checks on the source code (Doesn't change code)
-	@python -m ruff check --diff src/
+	@uv run ruff check --diff src/
 
 format:  # Check the format of source code  (Doesn't change code)
-	@python -m ruff format --diff src/
+	@uv run ruff format --diff src/
 
-update-pip:  # Updates the version of pip
-	@python -m pip install --upgrade pip
+typecheck:  # Static type checking on the source code
+	@uv run ty check
 
 uninstall: clean
-	@pip uninstall -y cruds
+	@uv pip uninstall cruds
 
 clean:  # Removes built Python Packages and cached byte code
-	@python -c "from setuptools import setup; setup()" clean --all;\
-		find $(PACKAGES) -type d -name __pycache__ -prune -exec rm -rfv {} \;;\
-		find $(PACKAGES) -type d -name '*.egg-info' -prune -exec rm -rfv {} \;;\
+	@find . -type d -name __pycache__ -prune -exec rm -rfv {} \;;\
+		find . -type d -name '*.egg-info' -prune -exec rm -rfv {} \;;\
 		echo "clean completed"
 
 .DEFAULT_GOAL := help
-.PHONY: help apidocs develop test test-report lint format update-pip uninstall clean
+.PHONY: help apidocs develop test test-report lint format typecheck uninstall clean
