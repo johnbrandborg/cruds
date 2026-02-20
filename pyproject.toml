@@ -35,13 +35,19 @@ dependencies = [
 ]
 
 [project.urls]
-Changelog = "http://cruds.readthedocs.io/en/stable/changelog.html"
-Documentation = "http://cruds.readthedocs.io/en/stable"
+Changelog = "https://cruds.readthedocs.io/en/stable/changelog.html"
+Documentation = "https://cruds.readthedocs.io/en/stable/"
 Source = "https://github.com/johnbrandborg/cruds"
 Tracker = "https://github.com/johnbrandborg/cruds/issues"
 
 [project.optional-dependencies]
-rtd = ["sphinx"]
+rtd = [
+    "furo",
+    "sphinx",
+    "sphinx-copybutton",
+    "sphinx-design",
+    "sphinxext-opengraph",
+]
 
 [dependency-groups]
 dev = [

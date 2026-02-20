@@ -1,36 +1,45 @@
 .. _user_guide:
 
-============
+==========
+User Guide
+==========
+
+.. _installation:
+
 Installation
 ============
 
 This part of the documentation covers the installation of CRUDs.
-The first step to using any software package is getting it properly installed.
 
-$ pip install cruds
--------------------
+From PyPI
+---------
 
-To install a stable version of CRUDs, use pip by running the following command::
+To install a stable version of CRUDs, use pip:
+
+.. code-block:: console
 
     $ python -m pip install cruds
 
 If you have installed Python, then pip should be available.  If not visit
 `getting-started <https://pip.pypa.io/en/stable/getting-started/>`_ with pip.
 
-Source Code
+From Source
 -----------
 
 If you would like to install the latest unreleased source code you can clone it from
 `Github CRUDs repository <https://github.com/johnbrandborg/cruds>`_.
 
-Using a git client you can clone the repository and install it with pip like so::
+Using a git client you can clone the repository and install it with pip:
+
+.. code-block:: console
 
     $ git clone https://github.com/johnbrandborg/cruds.git
     $ python -m pip install ./cruds
 
 For developers wanting to contribute, please visit the :ref:`development` section.
 
-=============
+.. _general-usage:
+
 General Usage
 =============
 
@@ -99,174 +108,212 @@ will be raised, ensuring a more efficient and streamlined experience.
 Comparison with Other Libraries
 -------------------------------
 
-Here are detailed comparisons showing how CRUDs simplifies common API tasks compared to other popular HTTP libraries.
+Here are detailed comparisons showing how CRUDs simplifies common API tasks
+compared to other popular HTTP libraries.
 
 **Basic API Call**
 
-.. code-block:: python
+.. tab-set::
 
-    # With requests
-    import requests
+    .. tab-item:: CRUDs
 
-    response = requests.get("https://api.example.com/users/123")
-    response.raise_for_status()
-    user = response.json()
+        .. code-block:: python
 
-    # With httpx
-    import httpx
+            import cruds
 
-    with httpx.Client() as client:
-        response = client.get("https://api.example.com/users/123")
-        response.raise_for_status()
-        user = response.json()
+            api = cruds.Client("https://api.example.com")
+            user = api.read("users/123")
 
-    # With CRUDs
-    import cruds
+    .. tab-item:: requests
 
-    api = cruds.Client("https://api.example.com")
-    user = api.read("users/123")
+        .. code-block:: python
+
+            import requests
+
+            response = requests.get("https://api.example.com/users/123")
+            response.raise_for_status()
+            user = response.json()
+
+    .. tab-item:: httpx
+
+        .. code-block:: python
+
+            import httpx
+
+            with httpx.Client() as client:
+                response = client.get("https://api.example.com/users/123")
+                response.raise_for_status()
+                user = response.json()
 
 **Authentication**
 
-.. code-block:: python
+.. tab-set::
 
-    # With requests - manual header management
-    import requests
+    .. tab-item:: CRUDs
 
-    headers = {"Authorization": "Bearer your-token"}
-    response = requests.get("https://api.example.com/users", headers=headers)
+        .. code-block:: python
 
-    # With CRUDs - automatic token handling
-    import cruds
+            import cruds
 
-    api = cruds.Client("https://api.example.com", auth="your-token")
-    users = api.read("users")
+            api = cruds.Client("https://api.example.com", auth="your-token")
+            users = api.read("users")
+
+    .. tab-item:: requests
+
+        .. code-block:: python
+
+            import requests
+
+            headers = {"Authorization": "Bearer your-token"}
+            response = requests.get("https://api.example.com/users", headers=headers)
 
 **OAuth2 Authentication**
 
-.. code-block:: python
+.. tab-set::
 
-    # With requests - you need to implement OAuth2 flow yourself
-    import requests
-    from requests_oauthlib import OAuth2Session
+    .. tab-item:: CRUDs
 
-    oauth = OAuth2Session(client_id, redirect_uri=redirect_uri)
-    authorization_url, state = oauth.authorization_url(auth_url)
-    # ... handle redirect, get code, exchange for token
-    token = oauth.fetch_token(token_url, client_secret=client_secret)
+        .. code-block:: python
 
-    response = requests.get("https://api.example.com/users",
-                          headers={"Authorization": f"Bearer {token['access_token']}"})
+            import cruds
+            from cruds.auth import OAuth2
 
-    # With CRUDs - OAuth2 handled automatically
-    import cruds
-    from cruds.auth import OAuth2
+            api = cruds.Client(
+                "https://api.example.com",
+                auth=OAuth2(
+                    url="https://api.example.com/oauth/token",
+                    client_id="your-client-id",
+                    client_secret="your-client-secret",
+                    scope="read write"
+                )
+            )
+            users = api.read("users")
 
-    api = cruds.Client(
-        "https://api.example.com",
-        auth=OAuth2(
-            url="https://api.example.com/oauth/token",
-            client_id="your-client-id",
-            client_secret="your-client-secret",
-            scope="read write"
-        )
-    )
-    users = api.read("users")
+    .. tab-item:: requests
+
+        .. code-block:: python
+
+            import requests
+            from requests_oauthlib import OAuth2Session
+
+            oauth = OAuth2Session(client_id, redirect_uri=redirect_uri)
+            authorization_url, state = oauth.authorization_url(auth_url)
+            # ... handle redirect, get code, exchange for token
+            token = oauth.fetch_token(token_url, client_secret=client_secret)
+
+            response = requests.get(
+                "https://api.example.com/users",
+                headers={"Authorization": f"Bearer {token['access_token']}"}
+            )
 
 **Error Handling and Retries**
 
-.. code-block:: python
+.. tab-set::
 
-    # With requests - manual retry logic
-    import requests
-    from requests.adapters import HTTPAdapter
-    from urllib3.util.retry import Retry
+    .. tab-item:: CRUDs
 
-    session = requests.Session()
-    retry_strategy = Retry(
-        total=3,
-        backoff_factor=1,
-        status_forcelist=[429, 500, 502, 503, 504],
-    )
-    adapter = HTTPAdapter(max_retries=retry_strategy)
-    session.mount("http://", adapter)
-    session.mount("https://", adapter)
+        .. code-block:: python
 
-    try:
-        response = session.get("https://api.example.com/users")
-        response.raise_for_status()
-        users = response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"Request failed: {e}")
+            import cruds
 
-    # With CRUDs - built-in retry logic and error handling
-    import cruds
+            api = cruds.Client("https://api.example.com", retries=3)
+            users = api.read("users")
 
-    api = cruds.Client("https://api.example.com", retries=3)
-    users = api.read("users")  # Automatic retries and error handling
+    .. tab-item:: requests
 
-**Complex API Operations**
+        .. code-block:: python
 
-.. code-block:: python
+            import requests
+            from requests.adapters import HTTPAdapter
+            from urllib3.util.retry import Retry
 
-    # With requests - verbose and error-prone
-    import requests
+            session = requests.Session()
+            retry_strategy = Retry(
+                total=3,
+                backoff_factor=1,
+                status_forcelist=[429, 500, 502, 503, 504],
+            )
+            adapter = HTTPAdapter(max_retries=retry_strategy)
+            session.mount("http://", adapter)
+            session.mount("https://", adapter)
 
-    # Create user
-    user_data = {"name": "John", "email": "john@example.com"}
-    response = requests.post("https://api.example.com/users", json=user_data)
-    response.raise_for_status()
-    user = response.json()
+            try:
+                response = session.get("https://api.example.com/users")
+                response.raise_for_status()
+                users = response.json()
+            except requests.exceptions.RequestException as e:
+                print(f"Request failed: {e}")
 
-    # Update user
-    update_data = {"name": "John Doe"}
-    response = requests.patch(f"https://api.example.com/users/{user['id']}", json=update_data)
-    response.raise_for_status()
+**Full CRUD Operations**
 
-    # Delete user
-    response = requests.delete(f"https://api.example.com/users/{user['id']}")
-    response.raise_for_status()
+.. tab-set::
 
-    # With CRUDs - clean and semantic
-    import cruds
+    .. tab-item:: CRUDs
 
-    api = cruds.Client("https://api.example.com")
+        .. code-block:: python
 
-    # Create user
-    user = api.create("users", data={"name": "John", "email": "john@example.com"})
+            import cruds
 
-    # Update user
-    api.update(f"users/{user['id']}", data={"name": "John Doe"})
+            api = cruds.Client("https://api.example.com")
 
-    # Delete user
-    api.delete(f"users/{user['id']}")
+            user = api.create("users", data={"name": "John", "email": "john@example.com"})
+            api.update(f"users/{user['id']}", data={"name": "John Doe"})
+            api.delete(f"users/{user['id']}")
+
+    .. tab-item:: requests
+
+        .. code-block:: python
+
+            import requests
+
+            user_data = {"name": "John", "email": "john@example.com"}
+            response = requests.post("https://api.example.com/users", json=user_data)
+            response.raise_for_status()
+            user = response.json()
+
+            update_data = {"name": "John Doe"}
+            response = requests.patch(
+                f"https://api.example.com/users/{user['id']}", json=update_data
+            )
+            response.raise_for_status()
+
+            response = requests.delete(f"https://api.example.com/users/{user['id']}")
+            response.raise_for_status()
 
 **Working with Query Parameters**
 
-.. code-block:: python
+.. tab-set::
 
-    # With requests - manual parameter encoding
-    import requests
-    from urllib.parse import urlencode
+    .. tab-item:: CRUDs
 
-    params = {
-        "page": 1,
-        "limit": 10,
-        "filter": "active",
-        "sort": "name"
-    }
-    response = requests.get(f"https://api.example.com/users?{urlencode(params)}")
+        .. code-block:: python
 
-    # With CRUDs - automatic parameter handling
-    import cruds
+            import cruds
 
-    api = cruds.Client("https://api.example.com")
-    users = api.read("users", params={
-        "page": 1,
-        "limit": 10,
-        "filter": "active",
-        "sort": "name"
-    })
+            api = cruds.Client("https://api.example.com")
+            users = api.read("users", params={
+                "page": 1,
+                "limit": 10,
+                "filter": "active",
+                "sort": "name"
+            })
+
+    .. tab-item:: requests
+
+        .. code-block:: python
+
+            import requests
+            from urllib.parse import urlencode
+
+            params = {
+                "page": 1,
+                "limit": 10,
+                "filter": "active",
+                "sort": "name"
+            }
+            response = requests.get(
+                f"https://api.example.com/users?{urlencode(params)}"
+            )
 
 Method Relationship
 -------------------
@@ -461,8 +508,6 @@ information around general operations.
 If you want to see logging set the level to INFO using the logging module as shown,
 below before you create the Client instance.
 
-**Recommended**
-
 .. code-block:: python
 
     import logging
@@ -490,11 +535,9 @@ initialization and the URI into the methods:
     class CatFactNinja(Client):
         """Cat Fact Ninja Interface"""
 
-        # Use private attributes for storing common URI's.
         _fact_uri = "fact"
 
         def __init__(self, **kwargs):
-            # Init Super with host name with kwargs
             super().__init__("http://catfact.ninja/", **kwargs)
 
         @property
