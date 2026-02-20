@@ -1,4 +1,4 @@
-# "Create, Read, Update, Delete"s
+# CRUDs
 
 [![PyPI - Version](https://img.shields.io/pypi/v/cruds)](https://pypi.org/project/cruds/)
 [![Supported Python Version](https://img.shields.io/pypi/pyversions/cruds?logo=python&logoColor=FFE873)](https://pypi.org/project/cruds/)
@@ -6,82 +6,90 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=johnbrandborg_cruds&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=johnbrandborg_cruds)
 [![Documentation Status](https://readthedocs.org/projects/cruds/badge/?version=latest)](https://cruds.readthedocs.io/en/latest/?badge=latest)
 
-**CRUDs** is a high level client library for APIs written in Python, and is ideal for back-end
-communication, automated data processing and interactive environments like Notebooks.
+**CRUDs** is a lightweight Python client for REST APIs — create, read, update,
+and delete with zero boilerplate.
 
 ```python
->>> import cruds
->>>
->>> catfact_ninja = cruds.Client("catfact.ninja")
->>>
->>> data = catfact_ninja.read("fact")
->>> type(date)  # Python built-in data types you can use instantly!
-<class 'dict'>
+import cruds
+
+api = cruds.Client("https://api.example.com", auth="your-token")
+
+# Create a resource
+user = api.create("users", data={"name": "Ada", "role": "engineer"})
+
+# Read it back
+user = api.read(f"users/{user['id']}")
+
+# Update it
+api.update(f"users/{user['id']}", data={"role": "lead"})
+
+# Delete it
+api.delete(f"users/{user['id']}")
 ```
 
-## Why CRUDs?
+No response objects to unpack. No manual JSON parsing. No boilerplate retry
+logic. Just your data.
 
-When working with APIs, you have several options. Here's why CRUDs might be the right choice:
-
-**vs. requests/httpx/urllib3:**
-- **Semantic API Design**: Think about what you're doing (create, read, update, delete) instead of HTTP methods
-- **Production-Ready**: Built-in retry logic, error handling, and logging without configuration
-- **Simplified Auth**: OAuth2, bearer tokens, and basic auth handled automatically
-- **Data-First**: Returns Python data structures directly instead of response objects
-
-**vs. SDKs for specific APIs:**
-- **Consistent Interface**: Same patterns across all APIs
-- **No Vendor Lock-in**: Switch between APIs without learning new patterns
-- **Lightweight**: No need for multiple heavy SDKs
-- **Customizable**: Full control while maintaining simplicity
-
-**Perfect for:**
-- Data engineers working with multiple APIs
-- Backend developers building integrations
-- Data scientists in notebooks
-- DevOps teams automating API interactions
-
-Make Create, Read, Update and Delete operations quickly, easily, and safely. CRUDs
-aims to implement URLLib3's best practises while remaining as light as possible.
-
-Features:
- * Authentication: Username & Password, Bearer Token and OAuth2
- * JSON Serialization/Deserialization
- * Request parameters and automatically URL encoded
- * Configurable timeouts (default 5 minutes)
- * Exceptions handling for bad status codes
- * Built-in retry logic with exponential backoff
- * SSL Certificate Verification
- * Logging for monitoring
- * Interfaces (SDK Creation)
-
-### Interfaces
-
-CRUDs provides pre-configured interfaces for popular APIs, making integration even easier:
-
-* **PlanHat** - Complete customer success platform interface with 20+ data models, bulk operations, and advanced analytics. [View Documentation](https://cruds.readthedocs.io/en/latest/interfaces.html#planhat)
-
-### Installation
-
-To install a stable version use [PyPI](https://pypi.org/project/cruds/).
+## Quickstart
 
 ```bash
-$ pip install cruds
+pip install cruds
 ```
 
-### Documentation
+```python
+import cruds
 
-Whether you are an data engineer wanting to retrieve or load data, a developer
-writing software for the back-of-the-front-end, or someone wanting to contribute
-to the project, for more information about CRUDs please visit
-[Read the Docs](https://cruds.readthedocs.io).
+catfacts = cruds.Client("catfact.ninja")
+fact = catfacts.read("fact")
+print(fact["fact"])
+```
+
+## Why CRUDs over requests/httpx?
+
+| You get                    | Without writing          |
+|----------------------------|--------------------------|
+| Semantic CRUD methods      | HTTP method boilerplate  |
+| Automatic JSON SerDes      | `.json()` / `.raise_for_status()` calls |
+| Retry with backoff         | `HTTPAdapter` / `Retry` setup |
+| Bearer, Basic & OAuth2 auth| Manual header management |
+| SSL verification           | `certifi` wiring         |
+
+```python
+# requests — 6 lines of ceremony
+import requests
+response = requests.get("https://api.example.com/users",
+                        headers={"Authorization": "Bearer token"})
+response.raise_for_status()
+users = response.json()
+
+# CRUDs — 2 lines of intent
+import cruds
+users = cruds.Client("api.example.com", auth="token").read("users")
+```
+
+## Features
+
+- **Authentication** — Bearer tokens, username/password, and OAuth2 (Client
+  Credentials, Resource Owner Password, Authorization Code with CSRF protection)
+- **JSON Serialization** — Send and receive Python dicts and lists directly
+- **Retries with backoff** — Configurable retry count, backoff factor, and
+  status codes (429, 500–504, etc.)
+- **Error handling** — Automatic exceptions for 4xx/5xx responses
+- **SSL verification** — Enabled by default via certifi
+- **Logging** — Built-in INFO/DEBUG logging for monitoring
+- **Interfaces** — Build SDKs with YAML configuration (ships with a full
+  [Planhat](https://cruds.readthedocs.io/en/latest/interfaces.html#planhat)
+  interface)
+
+## Documentation
+
+Full user guide, API reference, and examples at
+**[cruds.readthedocs.io](https://cruds.readthedocs.io)**.
 
 ## License
 
-CRUDs is released under the MIT License. See the bundled
-[LICENSE file](https://github.com/johnbrandborg/cruds/blob/main/LICENSE)
-for details.
+MIT — see [LICENSE](https://github.com/johnbrandborg/cruds/blob/main/LICENSE).
 
 ## Credits
 
-* [URLLib3 Team](https://github.com/urllib3)
+* [urllib3 Team](https://github.com/urllib3)

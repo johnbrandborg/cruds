@@ -4,14 +4,14 @@ Development
 ===========
 
 At this time because the CRUDs code base is located on a repository not located
-under an Orgination, to contribute it is recommended that you create a fork of
+under an Organization, to contribute it is recommended that you create a fork of
 CRUDs and then `Create a PR <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork>`_
 from there.
 
 Setup
 -----
 
-It is highlight recommended to create a virtual environment of Python.  There are
+It is highly recommended to create a virtual environment of Python.  There are
 multiple ways to do this.  The standard way is using Pythons very own
 `venv <https://docs.python.org/3/library/venv.html>`_.
 
