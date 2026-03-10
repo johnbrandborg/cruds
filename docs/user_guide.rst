@@ -474,6 +474,63 @@ as data, and the return is bytes type data.
     If there is a need to expand on the SerDes content types, please raise a
     issue in the Github repository so the project is aware of it.
 
+Multipart File Uploads
+----------------------
+
+The ``create()`` and ``update()`` methods support multipart file uploads via the
+``files`` parameter. When provided, the request is sent as ``multipart/form-data``
+using urllib3's ``fields`` parameter — no manual encoding is needed.
+
+The ``files`` dictionary values follow urllib3's field tuple format:
+
+- ``(filename, data)`` — file upload with auto-detected MIME type
+- ``(filename, data, content_type)`` — file upload with explicit MIME type
+- ``str`` or ``bytes`` — plain form field (for mixing form data with files)
+
+.. code-block:: python
+
+    import cruds
+
+    api = cruds.Client("https://api.example.com", auth="your-token")
+
+    # Upload a CSV file
+    api.create(
+        "upload/endpoint",
+        data=None,
+        files={"file": ("data.csv", csv_bytes, "text/csv")},
+    )
+
+    # Upload without specifying MIME type (auto-detected)
+    api.create(
+        "upload/endpoint",
+        data=None,
+        files={"file": ("report.pdf", pdf_bytes)},
+    )
+
+    # Mix form fields with file uploads
+    api.create(
+        "upload/endpoint",
+        data=None,
+        files={
+            "description": "Monthly report",
+            "file": ("report.pdf", pdf_bytes, "application/pdf"),
+        },
+    )
+
+When ``files`` is provided it takes precedence over ``data`` and the ``serialize``
+setting. When ``files`` is not provided (the default), the existing behaviour is
+unchanged.
+
+The ``update()`` method works the same way:
+
+.. code-block:: python
+
+    api.update(
+        "documents/123",
+        data=None,
+        files={"file": ("updated.csv", new_csv_bytes, "text/csv")},
+    )
+
 Retries
 -------
 

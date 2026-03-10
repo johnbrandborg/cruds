@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT: Final = 300.0
 
+_FieldValue = str | bytes | tuple[str, str | bytes] | tuple[str, str | bytes, str]
+
 
 class AuthABC(metaclass=abc.ABCMeta):
     """
@@ -181,6 +183,7 @@ class Client:
         uri: str,
         data: dict,
         params: dict[Any, Any] | None = None,
+        files: dict[str, _FieldValue] | None = None,
     ) -> dict[Any, Any] | bytes:
         """
         Makes a basic Create request to the API, and returns the response.
@@ -188,6 +191,10 @@ class Client:
         The HTTP method used is POST, and the data can be either a dictionary
         that is serialised to JSON or bytes and strings that will be sent
         without serialisation.
+
+        When files is provided, the request is sent as multipart/form-data
+        using urllib3's fields parameter. This takes precedence over data
+        serialisation.
 
         For POST requests parameters are encoded into the URL.
         https://urllib3.readthedocs.io/en/stable/user-guide.html#query-parameters
@@ -200,6 +207,10 @@ class Client:
             Payload to be sent to the API
         params : dict, optional
             Parameters to be added to the URI
+        files : dict, optional
+            Multipart form fields passed as urllib3 fields. Values can be
+            plain strings/bytes for form data, (filename, data) tuples, or
+            (filename, data, content_type) tuples for file uploads.
 
         Returns
         -------
@@ -211,15 +222,7 @@ class Client:
         logger.info(f"API Create Operation to {url}")
 
         self._check_auth()
-        if self.serialize:
-            response = self.manager.request(
-                method, url + safe_params, headers=self.request_headers, json=data
-            )
-        else:
-            response = self.manager.request(
-                method, url + safe_params, body=data, headers=self.request_headers
-            )
-
+        response = self._request_with_data(method, url + safe_params, data, files)
         return self._process_resp(method, response)
 
     def read(
@@ -259,6 +262,7 @@ class Client:
         data: dict[Any, Any] | str,
         params: dict[Any, Any] | None = None,
         replace: bool = False,
+        files: dict[str, _FieldValue] | None = None,
     ) -> dict[Any, Any] | bytes:
         """
         Makes a basic Update request to the API, and returns the response.
@@ -266,6 +270,10 @@ class Client:
         The HTTP method used is PATCH (or PUT with replace enabled), and the data
         can be either a dictionary that is serialised to JSON or bytes and
         strings that will be sent without serialisation.
+
+        When files is provided, the request is sent as multipart/form-data
+        using urllib3's fields parameter. This takes precedence over data
+        serialisation.
 
         For PUT requests parameters are encoded into the URL.
         https://urllib3.readthedocs.io/en/stable/user-guide.html#query-parameters
@@ -280,6 +288,10 @@ class Client:
             Parameters to be added to the URI
         replace : bool, optional
             Requests a full replacement of the entire entity. Uses PUT Method.
+        files : dict, optional
+            Multipart form fields passed as urllib3 fields. Values can be
+            plain strings/bytes for form data, (filename, data) tuples, or
+            (filename, data, content_type) tuples for file uploads.
 
         Returns
         -------
@@ -291,15 +303,7 @@ class Client:
         logger.info(f"API Update Operation to {url}")
 
         self._check_auth()
-        if self.serialize:
-            response = self.manager.request(
-                method, url + safe_params, headers=self.request_headers, json=data
-            )
-        else:
-            response = self.manager.request(
-                method, url + safe_params, body=data, headers=self.request_headers
-            )
-
+        response = self._request_with_data(method, url + safe_params, data, files)
         return self._process_resp(method, response)
 
     def delete(
@@ -328,6 +332,29 @@ class Client:
             method, url, fields=params, headers=self.request_headers
         )
         return self._process_resp(method, response)
+
+    def _request_with_data(
+        self,
+        method: str,
+        url: str,
+        data: Any,
+        files: dict[str, _FieldValue] | None,
+    ) -> urllib3.response.BaseHTTPResponse:
+        """
+        Dispatches an HTTP request with a body payload. Multipart fields take
+        precedence, then JSON serialisation, then raw body.
+        """
+        if files is not None:
+            return self.manager.request(
+                method, url, fields=files, headers=self.request_headers
+            )
+        if self.serialize:
+            return self.manager.request(
+                method, url, headers=self.request_headers, json=data
+            )
+        return self.manager.request(
+            method, url, body=data, headers=self.request_headers
+        )
 
     def _process_resp(
         self,
