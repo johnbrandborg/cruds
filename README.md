@@ -72,6 +72,8 @@ users = cruds.Client("api.example.com", auth="token").read("users")
 - **Authentication** — Bearer tokens, username/password, and OAuth2 (Client
   Credentials, Resource Owner Password, Authorization Code with CSRF protection)
 - **JSON Serialization** — Send and receive Python dicts and lists directly
+- **Multipart File Uploads** — Upload files with `multipart/form-data` via a
+  simple `files` parameter
 - **Retries with backoff** — Configurable retry count, backoff factor, and
   status codes (429, 500–504, etc.)
 - **Error handling** — Automatic exceptions for 4xx/5xx responses

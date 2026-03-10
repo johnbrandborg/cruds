@@ -1,6 +1,14 @@
 Changelog
 =========
 
+Release 1.6.0 (March 10, 2026)
+-------------------------------
+
+Features:
+ - Added multipart file upload support to ``create()`` and ``update()`` methods
+   via a new ``files`` parameter. Accepts urllib3 field tuples for
+   ``multipart/form-data`` uploads.
+
 Release 1.5.0 (February 20, 2026)
 ----------------------------------
 

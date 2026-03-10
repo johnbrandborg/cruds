@@ -208,6 +208,111 @@ def test_Client_delete_operation(crud_api):
     assert resp.data == b'{"name": "test"}'
 
 
+def test_Client_create_operation_with_files(crud_api):
+    """Check that create() sends multipart form data when files is provided."""
+    files = {"file": ("data.csv", b"a,b,c\n1,2,3", "text/csv")}
+    resp = crud_api.create("upload/endpoint", data=None, files=files)
+
+    crud_api.manager.request.assert_called_with(
+        "POST",
+        "https://localhost/upload/endpoint",
+        fields=files,
+        headers=request_headers,
+    )
+    assert resp.data == b'{"name": "test"}'
+
+
+def test_Client_create_operation_with_files_two_tuple(crud_api):
+    """Check that create() accepts 2-tuple (filename, data) without MIME type."""
+    files = {"file": ("data.csv", b"a,b,c\n1,2,3")}
+    resp = crud_api.create("upload/endpoint", data=None, files=files)
+
+    crud_api.manager.request.assert_called_with(
+        "POST",
+        "https://localhost/upload/endpoint",
+        fields=files,
+        headers=request_headers,
+    )
+    assert resp.data == b'{"name": "test"}'
+
+
+def test_Client_create_operation_with_files_mixed_fields(crud_api):
+    """Check that files dict can mix plain form fields with file tuples."""
+    files = {
+        "description": "uploaded file",
+        "file": ("data.csv", b"a,b,c\n1,2,3", "text/csv"),
+    }
+    resp = crud_api.create("upload/endpoint", data=None, files=files)
+
+    crud_api.manager.request.assert_called_with(
+        "POST",
+        "https://localhost/upload/endpoint",
+        fields=files,
+        headers=request_headers,
+    )
+    assert resp.data == b'{"name": "test"}'
+
+
+def test_Client_create_operation_files_takes_precedence(crud_api):
+    """Check that files takes precedence over data when both are provided."""
+    files = {"file": ("doc.pdf", b"%PDF-content", "application/pdf")}
+    sample = {"should": "be ignored"}
+    resp = crud_api.create("upload/endpoint", data=sample, files=files)
+
+    crud_api.manager.request.assert_called_with(
+        "POST",
+        "https://localhost/upload/endpoint",
+        fields=files,
+        headers=request_headers,
+    )
+    assert resp.data == b'{"name": "test"}'
+
+
+def test_Client_update_operation_with_files(crud_api):
+    """Check that update() sends multipart form data when files is provided."""
+    files = {"file": ("data.csv", b"a,b,c\n1,2,3", "text/csv")}
+    resp = crud_api.update("upload/endpoint", data=None, files=files)
+
+    crud_api.manager.request.assert_called_with(
+        "PATCH",
+        "https://localhost/upload/endpoint",
+        fields=files,
+        headers=request_headers,
+    )
+    assert resp.data == b'{"name": "test"}'
+
+
+def test_Client_update_operation_files_takes_precedence(crud_api):
+    """Check that files takes precedence over data when both are provided."""
+    files = {"file": ("doc.pdf", b"%PDF-content", "application/pdf")}
+    sample = {"should": "be ignored"}
+    resp = crud_api.update("upload/endpoint", data=sample, files=files)
+
+    crud_api.manager.request.assert_called_with(
+        "PATCH",
+        "https://localhost/upload/endpoint",
+        fields=files,
+        headers=request_headers,
+    )
+    assert resp.data == b'{"name": "test"}'
+
+
+def test_Client_update_operation_with_files_and_replace(crud_api):
+    """Check that update() with files and replace=True uses PUT method."""
+    files = {"file": ("data.csv", b"a,b,c\n1,2,3", "text/csv")}
+    resp = crud_api.update(
+        "upload/endpoint", data=None, files=files, replace=True
+    )
+
+    crud_api.manager.request.assert_called_with(
+        "PUT",
+        "https://localhost/upload/endpoint",
+        fields=files,
+        headers=request_headers,
+    )
+    assert resp.data == b'{"name": "test"}'
+
+
 def test_Client_process_resp_return_bytes():
     """
     Check the response processing returns bytes for non-JSON content.
