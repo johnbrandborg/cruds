@@ -28,6 +28,6 @@ from . import auth
 from .core import Client
 
 __author__: str = "John Brandborg"
-__version__: str = "1.6.0"
+__version__: str = "1.7.0"
 
 __all__: list = ["Client", "auth"]

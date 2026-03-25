@@ -123,6 +123,14 @@ def create(self, data: Any) -> dict:
     return self._owner.client.create(self._uri, data)
 
 
+def duplicate(self, data: Any) -> dict:
+    """
+    Duplicate time entries by id. Payload must include ``ids`` (list of
+    time-entry _id values). See Planhat Time Entry API duplicate operation.
+    """
+    return self._owner.client.create(f"{self._uri}/duplicate", data)
+
+
 def bulk_upsert(
     self,
     data: list,
