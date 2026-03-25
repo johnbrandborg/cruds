@@ -22,6 +22,7 @@ from cruds.interfaces.planhat.logic import (
     create,
     create_activity,
     delete,
+    duplicate,
     epoc_days_format,
     get_by_id,
     get_dimension_data,
@@ -118,6 +119,7 @@ def planhat_model():
         _sum_bulk_upsert_responses = _sum_bulk_upsert_responses
         bulk_insert_metrics = bulk_insert_metrics
         bulk_upsert = bulk_upsert
+        duplicate = duplicate
         create = create
         create_activity = create_activity
         delete = delete
@@ -304,6 +306,17 @@ def test_Model_bulk_upsert_results(planhat_model):
 
     for key in results:
         assert results[key] == expected_results[key]
+
+
+def test_Model_duplicate(planhat_model):
+    """
+    Time entry duplicate posts to {uri}/duplicate with ids payload.
+    """
+    payload = {"ids": ["67d07487557181002fd16d50"]}
+    planhat_model.duplicate(payload)
+    planhat_model._owner.client.create.assert_called_with(
+        "planhat_model_uri/duplicate", payload
+    )
 
 
 def test_Model_bulk_upsert_chunksize_two(planhat_model):

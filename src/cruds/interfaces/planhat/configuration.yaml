@@ -13,7 +13,7 @@ api:
       the tenant token (like 'segment') or no auth token but the tenant token is
       supplied directly to the method.
 
-      API Documentation: https://docs.planhat.com/#introduction
+      API Documentation: https://www.planhat.com/developers
 
     methods:
       - __init__
@@ -90,7 +90,7 @@ api:
         uri: companies
 
       - name: Conversation
-        doctring: |
+        docstring: |
           Conversations can be of different types such as email, chat, support tickets and
           manually logged notes. You can also create your own types in Planhat to represent
           things such as "in person meeting", "Training" etc. The default types (email, chat,
@@ -227,7 +227,7 @@ api:
           track objectives and the health per objective.
 
           Pro-tip: use your average Objective health in the Health Score!
-        uri: onjectives
+        uri: objectives
 
       - name: user_activity
         docstring: |
@@ -295,6 +295,26 @@ api:
           - get_list
           - delete
         uri: tickets
+
+      - name: Time_Entry
+        docstring: |
+          A single time log for tracking time. API path: timeentries. Duplicate
+          existing entries via duplicate() with payload {"ids": ["...", ...]}.
+        methods:
+          - create
+          - update
+          - get_by_id
+          - get_list
+          - delete
+          - bulk_upsert
+          - duplicate
+        uri: timeentries
+
+      - name: Timesheet
+        docstring: |
+          A collection of time entries for a user, used for tracking time.
+          API path: timesheets.
+        uri: timesheets
 
       - name: User
         docstring: |

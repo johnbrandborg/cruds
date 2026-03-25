@@ -1,6 +1,21 @@
 Changelog
 =========
 
+Release 1.7.0 (March 25, 2026)
+-------------------------------
+
+Features:
+ - Planhat: add ``Time_Entry`` and ``Timesheet`` models (``timeentries`` and ``timesheets``).
+ - Planhat: add ``duplicate()`` on the time entry model for bulk duplicate-by-id.
+
+Fixes:
+ - Planhat: correct Objective resource path from ``onjectives`` to ``objectives``.
+ - Planhat: fix Conversation model YAML so ``docstring`` is applied.
+
+Documentation:
+ - Nest Planhat under Interfaces in the Sphinx sidebar (``interfaces.rst`` + ``planhat.rst``).
+ - Align Planhat documentation links with https://www.planhat.com/developers.
+
 Release 1.6.0 (March 10, 2026)
 -------------------------------
 
