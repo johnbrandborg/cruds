@@ -1,0 +1,179 @@
+version: 1
+
+api:
+  - name: Kolleno
+    package: cruds.interfaces.kolleno.logic
+    docstring: |
+      Access Kolleno Open API v1 resources.
+
+      kolleno = Kolleno(
+          domain_name="https://your-kolleno-api-host/",
+          client_id="your-client-id",
+          client_secret="your-client-secret",
+      )
+      companies = kolleno.company.get_list(limit=100, offset=0)
+
+      API documentation:
+      https://documenter.getpostman.com/view/43609274/2sBYAvvVnT
+
+    methods:
+      - __init__
+
+    default_model_methods:
+      - get_list
+      - get_all
+      - get_by_id
+      - create
+      - update
+      - delete
+
+    required_model_methods:
+      - _build_uri
+
+    models:
+      - name: Company
+        docstring: |
+          Companies accessible to the API key.
+        uri: company
+        methods:
+          - get_list
+          - get_all
+          - get_by_id
+
+      - name: Card_Detail
+        docstring: |
+          Customer card details belonging to a company.
+        uri: card-detail
+        methods:
+          - get_list
+          - get_all
+
+      - name: Direct_Debit_Detail
+        docstring: |
+          Customer direct debit details belonging to a company.
+        uri: direct-debit-detail
+        methods:
+          - get_list
+          - get_all
+
+      - name: Customer
+        docstring: |
+          Customers belonging to a company.
+        uri: customer
+
+      - name: Customer_Portal
+        docstring: |
+          Customer portal URLs.
+        uri: customer/portal-url
+        methods:
+          - get_list
+
+      - name: Customer_Custom_Fields
+        docstring: |
+          Custom fields on customer records.
+        uri: customer/custom-fields
+        methods:
+          - update
+
+      - name: Credit_Note
+        docstring: |
+          Credit notes belonging to a customer.
+        uri: credit-note
+
+      - name: Credit_Note_PDF
+        docstring: |
+          Downloadable credit note PDF documents.
+        uri: credit-note/pdf
+        methods:
+          - download
+
+      - name: Invoice
+        docstring: |
+          Invoices belonging to a company.
+        uri: invoice
+
+      - name: Invoice_Custom_Fields
+        docstring: |
+          Custom fields on invoice records.
+        uri: invoice/custom-fields
+        methods:
+          - update
+
+      - name: Invoice_PDF
+        docstring: |
+          PDF documents attached to an invoice.
+        uri: invoice-pdf
+        methods:
+          - get_list
+          - get_all
+          - create
+          - delete
+
+      - name: Invoice_PDF_Download
+        docstring: |
+          Downloadable invoice PDF documents.
+        uri: invoice/pdf
+        methods:
+          - download
+
+      - name: Match
+        docstring: |
+          Transaction matches belonging to a company.
+        uri: match
+        methods:
+          - get_list
+          - get_all
+          - get_by_id
+
+      - name: Person
+        docstring: |
+          Customer contacts belonging to a company.
+        uri: person/company
+
+      - name: Person_Invoice
+        docstring: |
+          Relationships between people and invoices.
+        uri: person-invoice
+        methods:
+          - create
+          - delete
+
+      - name: Position_External
+        docstring: |
+          External contact positions belonging to a company.
+        uri: position-external
+        methods:
+          - get_list
+          - get_all
+
+      - name: Report_File
+        docstring: |
+          Generated report files belonging to a company.
+        uri: report-file
+        methods:
+          - get_list
+          - get_all
+          - download
+
+      - name: Tag
+        docstring: |
+          Tags belonging to a company.
+        uri: tag
+
+      - name: Tag_Category
+        docstring: |
+          Tag categories belonging to a company.
+        uri: tag/category
+
+      - name: Transaction
+        docstring: |
+          Transactions belonging to a customer.
+        uri: transaction
+
+      - name: Timeline
+        docstring: |
+          Timeline steps belonging to a company.
+        uri: step
+        methods:
+          - get_list
+          - get_all

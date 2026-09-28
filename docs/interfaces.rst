@@ -9,4 +9,5 @@ import them from interface packages under ``cruds.interfaces.<name>``.
 .. toctree::
    :maxdepth: 1
 
+   kolleno
    planhat

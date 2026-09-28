@@ -79,9 +79,9 @@ users = cruds.Client("api.example.com", auth="token").read("users")
 - **Error handling** — Automatic exceptions for 4xx/5xx responses
 - **SSL verification** — Enabled by default via certifi
 - **Logging** — Built-in INFO/DEBUG logging for monitoring
-- **Interfaces** — Build SDKs with YAML configuration (ships with a full
-  [Planhat](https://cruds.readthedocs.io/en/latest/interfaces.html#planhat)
-  interface)
+- **Interfaces** — Build SDKs with YAML configuration (ships with
+  [Kolleno](https://cruds.readthedocs.io/en/latest/kolleno.html) and
+  [Planhat](https://cruds.readthedocs.io/en/latest/planhat.html) interfaces)
 
 ## Documentation
 
