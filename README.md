@@ -9,6 +9,10 @@
 **CRUDs** is a lightweight Python client for REST APIs — create, read, update,
 and delete with zero boilerplate.
 
+It also provides supported interfaces for
+[Planhat](https://cruds.readthedocs.io/en/latest/planhat.html) and
+[Kolleno](https://cruds.readthedocs.io/en/latest/kolleno.html).
+
 ```python
 import cruds
 
