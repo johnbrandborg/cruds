@@ -6,7 +6,7 @@ api:
     docstring: |
       Handles sending and receiving data using specifically with PlanHat's API.
 
-      planhat = Planhat(api_token="9PhAfMO3WllHUmmhJA4eO3tJPhDck1aKLvQ5osvNUfKYdJ7H")
+      planhat = Planhat(api_token="your-api-token")
       print(planhat.asset.get_by_id("extid-21432948"))
 
       Most methods will use the normal API token for auth, but some will use
@@ -165,6 +165,25 @@ api:
           once the license is churned/lost also non fixed period licenses can have an end date.
         uri: licenses
 
+      - name: Deal
+        docstring: |
+          Deals represent sales opportunities or contracts associated with a company. They track
+          pipeline stages, revenue, and contract timelines, and can contain subscription or fee
+          line items.
+        uri: deals
+
+      - name: Line_Item
+        docstring: |
+          Line items represent subscriptions or one-off fees attached to a deal. Their revenue
+          values roll up to the parent deal and company.
+        uri: lineitems
+
+      - name: Product
+        docstring: |
+          Products are reusable subscription or fee templates. Product defaults can populate
+          pricing, period, and renewal fields on line items.
+        uri: products
+
       - name: Note
         docstring: |
           Notes in Planhat are technically Conversations. You can create your own custom Touch
@@ -195,6 +214,7 @@ api:
           Note: regardless your location the base URL for User Tracking events is always
             https://analytics.planhat.com.
         methods:
+          - epoch_days_format
           - epoc_days_format
           - get_dimension_data
           - bulk_insert_metrics

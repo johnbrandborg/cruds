@@ -1,8 +1,9 @@
 from copy import deepcopy
+from collections.abc import Generator
 from datetime import datetime
+from json import dumps
 from logging import getLogger
 from time import sleep
-from collections.abc import Generator
 from typing import Any
 
 from cruds.core import Client
@@ -13,38 +14,77 @@ logger = getLogger(__name__)
 
 PLANHAT_API_HOST = "https://api.planhat.com/"
 PLANHAT_ANALYTICS_HOST = "https://analytics.planhat.com/"
+PLANHAT_BULK_LIMIT = 5000
+PLANHAT_ANALYTICS_BODY_LIMIT = 32 * (1024**2)
+
+
+class PlanhatClient(Client):
+    """Client that preserves structured errors returned by Planhat bulk APIs."""
+
+    def _process_resp(self, method, response) -> dict[Any, Any] | bytes:
+        if (
+            self.raise_status
+            and response.status in {400, 403}
+            and response.status not in self.status_ignore
+        ):
+            try:
+                payload = response.json()
+            except (ValueError, TypeError):
+                payload = None
+
+            if isinstance(payload, dict):
+                errors = {
+                    key: value
+                    for key, value in payload.items()
+                    if key.lower().endswith("errors")
+                    and isinstance(value, list)
+                    and value
+                }
+                if errors:
+                    raise PlanhatUpsertError(errors)
+
+        return super()._process_resp(method, response)
 
 
 # Interface Methods
 
 
 def __init__(
-    self, api_token: str, tenant_token=None, calls_per_min=200, **kwargs
+    self,
+    api_token: str | None = None,
+    tenant_token: str | None = None,
+    calls_per_min: int | float = 200,
+    **kwargs,
 ) -> None:
-    self.client = Client(host=PLANHAT_API_HOST, auth=api_token, **kwargs)
+    self._client_kwargs = kwargs.copy()
+    self.client = PlanhatClient(host=PLANHAT_API_HOST, auth=api_token, **kwargs)
     self.tenant_token = tenant_token
     self.calls_per_min = calls_per_min
-    self._bulk_upsert_response = {}
+    self._bulk_upsert_response: dict[str, Any] = {}
 
 
 @property
-def calls_per_min(self) -> int:
+def calls_per_min(self) -> int | float:
     return self._calls_per_min
 
 
 @calls_per_min.setter
-def calls_per_min(self, value) -> None:
-    self._calls_per_min = value
-    self._delay = 60 / max(min(value, 200), 1)
+def calls_per_min(self, value: int | float) -> None:
+    self._calls_per_min = max(min(value, 200), 1)
+    self._delay = 60 / self._calls_per_min
 
 
 @staticmethod
-def epoc_days_format(date: str, reference="1970-01-01") -> int:
+def epoch_days_format(date: str, reference: str = "1970-01-01") -> int:
     """
-    Takes an ISO formatted datetime string and returns the amount of lapsed
-    that has lapsed.  Default reference is 1st January 1970.
+    Return the number of elapsed days from the reference ISO date.
     """
     return (datetime.fromisoformat(date) - datetime.fromisoformat(reference)).days
+
+
+def epoc_days_format(self, date: str, reference: str = "1970-01-01") -> int:
+    """Backward-compatible alias for :meth:`epoch_days_format`."""
+    return self.epoch_days_format(date, reference)
 
 
 @property
@@ -56,32 +96,39 @@ def tenant_token(self) -> str:
 
 
 @tenant_token.setter
-def tenant_token(self, value) -> None:
+def tenant_token(self, value: str | None) -> None:
     self.__tenant_token = value
 
     if value is not None:
-        self.client_analytics = Client(host=PLANHAT_ANALYTICS_HOST, auth=(value, ""))
+        self.client_analytics = PlanhatClient(
+            host=PLANHAT_ANALYTICS_HOST,
+            auth=(value, ""),
+            **self._client_kwargs,
+        )
 
 
-def bulk_upsert_response_check(self) -> None:
+def bulk_upsert_response_check(self, response: dict[str, Any] | None = None) -> None:
     """
-    Checks the response returned by Bulk Upserts, and raises an exception if one is found.
+    Raise an exception containing every error category in a bulk response.
+
+    If response is omitted, the most recent bulk response for this Planhat
+    instance is checked.
     """
-    if not self._bulk_upsert_response:
+    response = self._bulk_upsert_response if response is None else response
+
+    if not response:
         logger.info("Bulk Upsert response is empty.")
         return
 
-    for error in (
-        {"type": key, "count": len(value)}
-        for key, value in self._bulk_upsert_response.items()
-        if "Errors" in key and isinstance(value, list)
-    ):
-        if error["count"]:
-            raise PlanhatUpsertError(
-                f"Errors found: {self._bulk_upsert_response[error['type']]}"
-            )
+    errors = {
+        key: value
+        for key, value in response.items()
+        if key.lower().endswith("errors") and isinstance(value, list) and value
+    }
+    if errors:
+        raise PlanhatUpsertError(errors)
 
-        logger.info(f"{error['type']} check passed.")
+    logger.info("Bulk Upsert response check passed.")
 
 
 @staticmethod
@@ -97,11 +144,20 @@ def _sum_bulk_upsert_responses(total: dict, response: dict | bytes) -> None:
         logger.debug(f"Skipping non-dict response: {type(response)}")
         return
 
-    for key in response:
-        if key in total and isinstance(response[key], (tuple, list, int, float)):
-            total[key] = total[key] + response[key]
+    for key, value in response.items():
+        matching_sequences = isinstance(value, (tuple, list)) and isinstance(
+            total.get(key), type(value)
+        )
+        matching_numbers = (
+            not isinstance(value, bool)
+            and not isinstance(total.get(key), bool)
+            and isinstance(value, (int, float))
+            and isinstance(total.get(key), (int, float))
+        )
+        if key in total and (matching_sequences or matching_numbers):
+            total[key] = total[key] + value
         else:
-            total[key] = response[key]
+            total[key] = value
 
 
 # Model Methods
@@ -133,9 +189,10 @@ def duplicate(self, data: Any) -> dict:
 
 def bulk_upsert(
     self,
-    data: list,
-    chunk_size=5000,
-) -> dict[str, int | list[str]]:
+    data: list[dict[str, Any]],
+    chunk_size: int = PLANHAT_BULK_LIMIT,
+    raise_on_error: bool = False,
+) -> dict[str, Any]:
     """
     Takes data in form of JSON and updates entries already in PlanHat.
     (Limit of 5,000 items per request)
@@ -144,12 +201,17 @@ def bulk_upsert(
     To update an asset it is required to specify in the payload one of the
     following keyables: _id, sourceId and/or externalId.
     """
-    self._bulk_upsert_response = {}
+    if not isinstance(chunk_size, int):
+        raise TypeError("chunk_size must be an integer")
+    if chunk_size < 1 or chunk_size > PLANHAT_BULK_LIMIT:
+        raise ValueError(f"chunk_size must be between 1 and {PLANHAT_BULK_LIMIT}")
+
+    response: dict[str, Any] = {}
 
     for reference in range(0, len(data), chunk_size):
         next_reference: int = reference + chunk_size
         self._owner._sum_bulk_upsert_responses(
-            self._bulk_upsert_response,
+            response,
             self._owner.client.update(
                 self._uri,
                 data[reference:next_reference],
@@ -157,9 +219,14 @@ def bulk_upsert(
             ),
         )
         logger.info(f"  -> Bulk Records Delivered: {reference} - {next_reference - 1}")
-        sleep(self._owner._delay)
+        if next_reference < len(data):
+            sleep(self._owner._delay)
 
-    return self._bulk_upsert_response
+    self._owner._bulk_upsert_response = response
+    if raise_on_error:
+        self._owner.bulk_upsert_response_check(response)
+
+    return response
 
 
 def delete(self, identification: str) -> dict:
@@ -210,9 +277,11 @@ def get_lean_list(self, external_id=None, source_id=None, status=None) -> list[d
 
     if status:
         if isinstance(status, (list, tuple)):
-            company_params["status"] = status
+            company_params["status"] = ",".join(str(item).strip() for item in status)
         else:
-            company_params["status"] = [item.strip() for item in status.split(",")]
+            company_params["status"] = ",".join(
+                item.strip() for item in status.split(",")
+            )
 
     return self._owner.client.read("leancompanies", params=company_params)
 
@@ -225,7 +294,7 @@ def get_dimension_data(
     dimension_id=None,
     limit=10000,
     max_requests=0,
-) -> Generator:
+) -> Generator[list[dict[str, Any]], None, None]:
     """
     When fetching dimension data there are some options that can be used via query params:
 
@@ -239,10 +308,10 @@ def get_dimension_data(
     limit = max(limit, 1)
 
     params: dict[str, Any] = {
-        "from": self.epoc_days_format(from_day)
+        "from": self.epoch_days_format(from_day)
         if isinstance(from_day, str)
         else from_day,
-        "to": self.epoc_days_format(to_day) if isinstance(to_day, str) else to_day,
+        "to": self.epoch_days_format(to_day) if isinstance(to_day, str) else to_day,
         "limit": limit,
         "offset": 0,
     }
@@ -259,45 +328,58 @@ def get_dimension_data(
 def get_list(
     self,
     sort: str = "-_id",
-    select: str = "name, companyId",
+    select: str | None = "name, companyId",
     limit: int = 2000,
     max_requests: int = 0,
-) -> Generator:
+    **filters: Any,
+) -> Generator[list[dict[str, Any]], None, None]:
     """
-    Creates a generator that retrieves yields the data as Dictionaries
-    Select can be an empty string, but defaults to those fields needed for creation.
+    Yield pages of model records, with optional selection and model filters.
     """
-    params: dict[str, str | int] = {
+    params: dict[str, Any] = {
         "sort": sort,
-        "select": select,
         "limit": max(limit, 1),
         "offset": 0,
+        **filters,
     }
+    if select is not None:
+        params["select"] = select
 
     yield from self._get_all_data(self._uri, params, max_requests)
 
 
-def _get_all_data(self, uri, params, max_requests) -> Generator:
+def _get_all_data(
+    self, uri: str, params: dict[str, Any], max_requests: int
+) -> Generator[list[dict[str, Any]], None, None]:
     """
     A generator that retrieves all model data for a given selection
     """
     updated_params = deepcopy(params)
 
-    retrieved: int = 0
     requests: int = 0
 
-    # If we retrive less than the limit the API is indicating it has no more
-    # data left to give.  Also requests set to 0 will loop for ever.
-    while retrieved >= updated_params["limit"] or requests == 0:
-        data: dict = self._owner.client.read(uri, updated_params)
-        retrieved: int = len(data)
+    while max_requests == 0 or requests < max_requests:
+        data = self._owner.client.read(uri, updated_params)
+        if not isinstance(data, list):
+            raise TypeError(
+                f"Expected a list response while paginating {uri}, "
+                f"received {type(data).__name__}"
+            )
+
+        retrieved = len(data)
         requests += 1
 
         logger.info(f"  -> Records Retrieved: {updated_params['offset'] + retrieved}")
 
         yield data
 
-        if requests >= max_requests and max_requests != 0:
+        if not data:
+            break
+
+        if retrieved < updated_params["limit"]:
+            break
+
+        if max_requests and requests >= max_requests:
             logger.info("Max requests reached.")
             break
 
@@ -310,20 +392,22 @@ def _get_all_data(self, uri, params, max_requests) -> Generator:
 ## User Activity - Analytics Endpoint
 
 
-def bulk_insert_metrics(self, data: Any, auto_chunk=True) -> dict:
+def bulk_insert_metrics(
+    self, data: Any, auto_chunk: bool = True, raise_on_error: bool = False
+) -> dict[Any, Any] | bytes:
     """
     To push dimension data into Planhat it is required to specify the Tenant Token
     (tenantUUID) in the request URL. This token is a simple uui identifier for your
     tenant and it can be found in the Developer module under the Tokens section.
     """
     if auto_chunk is True and isinstance(data, list) and len(data) > 0:
-        self._bulk_upsert_response = {}
+        response: dict[str, Any] = {}
         chunk_size: int = calculate_metric_chunk_size(data)
 
         for reference in range(0, len(data), chunk_size):
             next_reference: int = reference + chunk_size
             self._owner._sum_bulk_upsert_responses(
-                self._bulk_upsert_response,
+                response,
                 self._owner.client_analytics.create(
                     f"{self._uri}/{self._owner.tenant_token}",
                     data[reference:next_reference],
@@ -332,9 +416,12 @@ def bulk_insert_metrics(self, data: Any, auto_chunk=True) -> dict:
             logger.info(
                 f"  -> Bulk Metrics Delivered: {reference} - {next_reference - 1}"
             )
-            sleep(3)
 
-        return self._bulk_upsert_response
+        self._owner._bulk_upsert_response = response
+        if raise_on_error:
+            self._owner.bulk_upsert_response_check(response)
+
+        return response
 
     return self._owner.client_analytics.create(
         f"{self._uri}/{self._owner.tenant_token}", data
@@ -342,44 +429,37 @@ def bulk_insert_metrics(self, data: Any, auto_chunk=True) -> dict:
 
 
 def calculate_metric_chunk_size(
-    data: list | dict, sample_per=1000, max_bytes=32 * (1024**2), reduction=10
+    data: list | dict,
+    sample_per: int = 1000,
+    max_bytes: int = PLANHAT_ANALYTICS_BODY_LIMIT,
+    reduction: int = 10,
 ) -> int:
     """
-    Determines the chunk size of a list of JSON objects to be sent to an API,
-    based on the maximum size in bytes that API can recieve.  A reduction percentage
-    is applied to avoid the random sampling calculating to many rows.
+    Determine a conservative, deterministic chunk size below the body limit.
 
-    Reducing the sample per number of JSON objects increases the accuracy.
+    ``sample_per`` remains accepted for backward compatibility. Every row is
+    measured so an unusually large unsampled row cannot exceed Planhat's limit.
     """
-    from random import randint
-    from statistics import mean
-    from json import dumps
-
     logger.info("Calculating chunk size of metric data")
 
-    # Handle case where data is not a list (e.g., single dictionary)
     if not isinstance(data, list):
-        # For single items, return 1 as chunk size
         return 1
-
-    if len(data) > 0:
-        sample_count: int = int(max(round(len(data)) / sample_per, 1))
-    else:
+    if not data:
         return 0
+    if max_bytes < 1:
+        raise ValueError("max_bytes must be greater than zero")
+    if reduction < 0 or reduction >= 100:
+        raise ValueError("reduction must be between 0 and 99")
 
-    sample_positions: set[int] = set()
+    effective_limit = int(max_bytes * (1 - reduction / 100)) - 2
+    largest_item = max(len(dumps(item).encode()) + 1 for item in data)
+    if largest_item > effective_limit:
+        raise ValueError("A single analytics item exceeds the request body limit")
 
-    while len(sample_positions) < sample_count:
-        sample_positions.add(randint(0, len(data) - 1))
-
-    average_size: int = round(
-        mean([len(dumps(data[pos]).encode()) for pos in sample_positions])
-    )
-
-    chunk_size: int = round((max_bytes * (1 - reduction / 100)) / average_size)
+    chunk_size = max(effective_limit // largest_item, 1)
     logger.info(
-        "Average: %d bytes, Size: %d rows, Bytes (%d%% Reduction)",
-        average_size,
+        "Largest item: %d bytes, Size: %d rows, Bytes (%d%% Reduction)",
+        largest_item,
         chunk_size,
         reduction,
     )
@@ -388,7 +468,11 @@ def calculate_metric_chunk_size(
 
 
 def create_activity(
-    self, data: Any, bulk=False, auto_chunk=True
+    self,
+    data: Any,
+    bulk: bool = False,
+    auto_chunk: bool = True,
+    raise_on_error: bool = False,
 ) -> dict[Any, Any] | bytes:
     """
     Creates user activity.  Required data keys are email or externalId.
@@ -409,13 +493,13 @@ def create_activity(
 
     # Only apply auto-chunking for bulk operations with list data
     if bulk and auto_chunk and isinstance(data, list) and len(data) > 0:
-        self._bulk_upsert_response = {}
+        response: dict[str, Any] = {}
         chunk_size: int = calculate_metric_chunk_size(data)
 
         for reference in range(0, len(data), chunk_size):
             next_reference: int = reference + chunk_size
             self._owner._sum_bulk_upsert_responses(
-                self._bulk_upsert_response,
+                response,
                 self._owner.client_analytics.create(
                     f"{self._uri}{bulk_path}/{self._owner.tenant_token}",
                     data[reference:next_reference],
@@ -424,16 +508,21 @@ def create_activity(
             logger.info(
                 f"  -> Bulk Activity Delivered: {reference} - {next_reference - 1}"
             )
-            sleep(3)
 
-        return self._bulk_upsert_response
+        self._owner._bulk_upsert_response = response
+        if raise_on_error:
+            self._owner.bulk_upsert_response_check(response)
+
+        return response
 
     return self._owner.client_analytics.create(
         f"{self._uri}{bulk_path}/{self._owner.tenant_token}", data
     )
 
 
-def segment(self, data, auto_chunk=True) -> dict[Any, Any] | bytes:
+def segment(
+    self, data: Any, auto_chunk: bool = True, raise_on_error: bool = False
+) -> dict[Any, Any] | bytes:
     """
     Segment can be used to send User Events (user tracking data) to Planhat.
     Required data keys are type, and trait.  trait is an object.
@@ -453,13 +542,13 @@ def segment(self, data, auto_chunk=True) -> dict[Any, Any] | bytes:
 
     # Apply auto-chunking for list data
     if auto_chunk and isinstance(data, list) and len(data) > 0:
-        self._bulk_upsert_response = {}
+        response: dict[str, Any] = {}
         chunk_size: int = calculate_metric_chunk_size(data)
 
         for reference in range(0, len(data), chunk_size):
             next_reference: int = reference + chunk_size
             self._owner._sum_bulk_upsert_responses(
-                self._bulk_upsert_response,
+                response,
                 self._owner.client_analytics.create(
                     "dock/segment",
                     data[reference:next_reference],
@@ -468,8 +557,11 @@ def segment(self, data, auto_chunk=True) -> dict[Any, Any] | bytes:
             logger.info(
                 f"  -> Bulk Segment Delivered: {reference} - {next_reference - 1}"
             )
-            sleep(3)
 
-        return self._bulk_upsert_response
+        self._owner._bulk_upsert_response = response
+        if raise_on_error:
+            self._owner.bulk_upsert_response_check(response)
+
+        return response
 
     return self._owner.client_analytics.create("dock/segment", data)

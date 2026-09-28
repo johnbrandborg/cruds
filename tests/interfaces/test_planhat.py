@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, Mock
 from unittest import mock
 
 import pytest
+import urllib3
 
 from cruds import Client
 from cruds.interfaces.planhat import Planhat  # ty: ignore[unresolved-import]
@@ -24,6 +25,7 @@ from cruds.interfaces.planhat.logic import (
     delete,
     duplicate,
     epoc_days_format,
+    epoch_days_format,
     get_by_id,
     get_dimension_data,
     get_lean_list,
@@ -35,7 +37,7 @@ from cruds.interfaces.planhat.logic import (
 from cruds.interfaces.planhat.exception import PlanhatUpsertError
 
 
-TEST_API_TOKEN = "9PhAfMO3WllHUmmhJA4eO3tJPhDck1aKLvQ5osvNUfKYdJ7H"
+TEST_API_TOKEN = "test-api-token"
 TEST_COMPANY_ID = "8IfbCnRP4HGAarzxVop1AS3I"
 TEST_TENANT_TOKEN = "1d5df0f5-f217-49da-8997-2878f5986a9f"
 
@@ -124,6 +126,7 @@ def planhat_model():
         create_activity = create_activity
         delete = delete
         epoc_days_format = epoc_days_format
+        epoch_days_format = epoch_days_format
         get_by_id = get_by_id
         get_dimension_data = get_dimension_data
         get_lean_list = get_lean_list
@@ -132,7 +135,8 @@ def planhat_model():
         segment = segment
 
     model = Model(Mock(), "planhat_model_uri")
-    model._owner._bulk_upsert_response = []
+    model._owner._bulk_upsert_response = {}
+    model._owner._sum_bulk_upsert_responses = _sum_bulk_upsert_responses
     model._owner._delay = 0
     model._owner.tenant_token = TEST_TENANT_TOKEN
 
@@ -143,7 +147,7 @@ def test_Planhat_init(planhat):
     """
     Check to see if the init holds the company_id, and delay for rate limiting
     """
-    EXCEPTED_AUTH_HEADER = "Bearer 9PhAfMO3WllHUmmhJA4eO3tJPhDck1aKLvQ5osvNUfKYdJ7H"
+    EXCEPTED_AUTH_HEADER = "Bearer test-api-token"
 
     assert isinstance(planhat.client, Client)
     assert planhat.client.request_headers["Authorization"] == EXCEPTED_AUTH_HEADER
@@ -164,6 +168,18 @@ def test_Planhat_init_analytics():
     assert isinstance(planhat.client_analytics, Client)
 
 
+def test_Planhat_analytics_client_inherits_transport_options():
+    planhat = Planhat(
+        TEST_API_TOKEN,
+        tenant_token=TEST_TENANT_TOKEN,
+        raise_status=False,
+        serialize=False,
+    )
+
+    assert planhat.client_analytics.raise_status is False
+    assert planhat.client_analytics.serialize is False
+
+
 def test_Planhat_init_analytics_with_no_tenant_token():
     """
     If no tenant token is supplied, trying to retrieve it raises an exception
@@ -173,6 +189,47 @@ def test_Planhat_init_analytics_with_no_tenant_token():
 
     with pytest.raises(RuntimeError):
         planhat.tenant_token
+
+
+def test_Planhat_allows_analytics_only_initialization():
+    planhat = Planhat(tenant_token=TEST_TENANT_TOKEN)
+
+    assert "Authorization" not in planhat.client.request_headers
+    assert planhat.tenant_token == TEST_TENANT_TOKEN
+
+
+@pytest.mark.parametrize(
+    ("calls_per_min", "expected"), [(0, 1), (201, 200), (20.5, 20.5)]
+)
+def test_Planhat_clamps_unsupported_rate_limits(calls_per_min, expected):
+    planhat = Planhat(TEST_API_TOKEN, calls_per_min=calls_per_min)
+
+    assert planhat.calls_per_min == expected
+
+
+def test_Planhat_models_are_isolated_between_clients():
+    first = Planhat("first-token")
+    second = Planhat("second-token")
+
+    assert first.company is not second.company
+    assert first.company._owner is first
+    assert second.company._owner is second
+    assert second.company._owner.client.request_headers["Authorization"] == (
+        "Bearer second-token"
+    )
+
+
+@pytest.mark.parametrize(
+    ("model_name", "uri"),
+    [("deal", "deals"), ("line_item", "lineitems"), ("product", "products")],
+)
+def test_Planhat_new_revenue_models(model_name, uri):
+    planhat = Planhat(TEST_API_TOKEN)
+    model = getattr(planhat, model_name)
+
+    assert model._uri == uri
+    assert callable(model.create)
+    assert callable(model.bulk_upsert)
 
 
 def test_Planhat_bulk_upsert_response_check_empty(planhat):
@@ -226,7 +283,28 @@ def test_Planhat_bulk_upsert_response_check_with_errors(planhat):
     with pytest.raises(PlanhatUpsertError) as excinfo:
         planhat.bulk_upsert_response_check()
 
-    assert "Errors found: ['email duplicated']" == str(excinfo.value)
+    assert excinfo.value.errors == {
+        "createdErrors": ["email duplicated"],
+        "updatedErrors": ["invalid id"],
+    }
+
+
+def test_Planhat_client_preserves_structured_http_bulk_errors(planhat):
+    response = urllib3.HTTPResponse(
+        body=json.dumps(
+            {
+                "createdErrors": [{"message": "missing required field"}],
+                "permissionErrors": [{"message": "forbidden"}],
+            }
+        ).encode(),
+        headers={"Content-Type": "application/json"},
+        status=403,
+    )
+
+    with pytest.raises(PlanhatUpsertError) as excinfo:
+        planhat.client._process_resp("PUT", response)
+
+    assert set(excinfo.value.errors) == {"createdErrors", "permissionErrors"}
 
 
 def test_Model_epoc_days_format(planhat_model):
@@ -236,6 +314,10 @@ def test_Model_epoc_days_format(planhat_model):
 
     assert planhat_model.epoc_days_format("1975-06-01") == 1977
     assert planhat_model.epoc_days_format("2022-04-15") == 19097
+
+
+def test_Model_epoch_days_format(planhat_model):
+    assert planhat_model.epoch_days_format("2022-04-15") == 19097
 
 
 def test_Model_model_init(planhat_model):
@@ -304,8 +386,7 @@ def test_Model_bulk_upsert_results(planhat_model):
         "updatedKeys": bulk_upsert_sample,
     }
 
-    for key in results:
-        assert results[key] == expected_results[key]
+    assert results == expected_results
 
 
 def test_Model_duplicate(planhat_model):
@@ -355,6 +436,24 @@ def test_Model_bulk_upsert_chunksize_two(planhat_model):
         ],
         replace=True,
     )
+
+
+@pytest.mark.parametrize("chunk_size", [0, 5001])
+def test_Model_bulk_upsert_rejects_invalid_chunk_size(planhat_model, chunk_size):
+    with pytest.raises(ValueError):
+        planhat_model.bulk_upsert([{"_id": "1"}], chunk_size=chunk_size)
+
+
+def test_Model_bulk_upsert_updates_owner_response_and_can_raise(planhat):
+    planhat._delay = 0
+    planhat.client.update = Mock(
+        return_value={"created": 0, "createdErrors": [{"message": "invalid"}]}
+    )
+
+    with pytest.raises(PlanhatUpsertError):
+        planhat.company.bulk_upsert([{"name": "invalid"}], raise_on_error=True)
+
+    assert planhat._bulk_upsert_response["createdErrors"] == [{"message": "invalid"}]
 
 
 def test_Model_delete(planhat_model):
@@ -440,7 +539,7 @@ def test_Model_get_lean_list_status_list(planhat_model):
     planhat_model.get_lean_list(status=["lost", "prospect"])
     planhat_model._owner.client.read.assert_called_with(
         "leancompanies",
-        params={"status": ["lost", "prospect"]},
+        params={"status": "lost,prospect"},
     )
 
 
@@ -451,7 +550,7 @@ def test_Model_get_lean_list_status_string(planhat_model):
     planhat_model.get_lean_list(status="lost, prospect")
     planhat_model._owner.client.read.assert_called_with(
         "leancompanies",
-        params={"status": ["lost", "prospect"]},
+        params={"status": "lost,prospect"},
     )
 
 
@@ -521,7 +620,32 @@ def test_Model_get_list_generator(planhat_model):
 
     planhat_model._get_all_data.assert_called_with(
         "planhat_model_uri",
-        {"sort": "-_id", "select": "name, companyId", "limit": 2000, "offset": 0},
+        {"sort": "-_id", "limit": 2000, "offset": 0, "select": "name, companyId"},
+        0,
+    )
+
+
+def test_Model_get_list_supports_filters(planhat_model):
+    planhat_model._get_all_data = MagicMock(return_value=iter([]))
+
+    list(
+        planhat_model.get_list(
+            limit=5000,
+            select=None,
+            companyId="company-1",
+            dealId="deal-1",
+        )
+    )
+
+    planhat_model._get_all_data.assert_called_once_with(
+        "planhat_model_uri",
+        {
+            "sort": "-_id",
+            "limit": 5000,
+            "offset": 0,
+            "companyId": "company-1",
+            "dealId": "deal-1",
+        },
         0,
     )
 
@@ -540,6 +664,17 @@ def test_Model__get_all_data_standard(planhat_model):
         assert data == EXAMPLE_GET_DIMENSION_DATA
 
     assert index == 0
+
+
+def test_Model__get_all_data_rejects_non_list_response(planhat_model):
+    planhat_model._owner.client.read.return_value = {"items": []}
+
+    with pytest.raises(TypeError, match="Expected a list response"):
+        list(
+            planhat_model._get_all_data(
+                "get_all_standard_uri", {"limit": 2000, "offset": 0}, 0
+            )
+        )
 
 
 def test_Model__get_all_data_max_requests(planhat_model):
@@ -567,7 +702,7 @@ def test_Model__get_all_data_with_limit_one(planhat_model):
     per request.
 
     With 3 entries in the example data 4 requests should be made because the
-    drop off from the limit occurs only when the payload returned is empty.
+    final empty response signals that pagination has completed.
     """
     step_size: int = 1
     planhat_model._owner.client.read.side_effect = api_responses(
@@ -584,9 +719,8 @@ def test_Model__get_all_data_with_limit_one(planhat_model):
         assert data == EXAMPLE_GET_DIMENSION_DATA[step : step + step_size]
 
         updated_params["offset"] += step_size
-        print("INDEX", index)
-
     assert index == 3
+    assert planhat_model._owner.client.read.call_count == 4
 
 
 def test_Model__get_all_data_with_limit_two(planhat_model):
@@ -728,7 +862,7 @@ def test_bulk_insert_metrics_chunking(planhat_model):
     ):
         result = planhat_model.bulk_insert_metrics(data, auto_chunk=True)
     assert planhat_model._owner.client_analytics.create.call_count == 5
-    assert result == {}
+    assert result == {"ok": True}
 
 
 def test_bulk_insert_metrics_no_chunking(planhat_model):
@@ -770,7 +904,7 @@ def test_create_activity_bulk_chunking(planhat_model):
     ):
         result = planhat_model.create_activity(data, bulk=True, auto_chunk=True)
     assert planhat_model._owner.client_analytics.create.call_count == 5
-    assert result == {}
+    assert result == {"ok": True}
 
 
 def test_create_activity_no_chunking(planhat_model):
@@ -800,7 +934,7 @@ def test_segment_chunking(planhat_model):
     ):
         result = planhat_model.segment(data, auto_chunk=True)
     assert planhat_model._owner.client_analytics.create.call_count == 5
-    assert result == {}
+    assert result == {"ok": True}
 
 
 def test_segment_no_chunking(planhat_model):

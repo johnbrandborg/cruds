@@ -67,6 +67,20 @@ def test_ModelFactory_descriptor_setup(interface):
     assert interface.test.echo("foo") == "bar"
 
 
+def test_ModelFactory_models_are_bound_per_interface_instance():
+    first = Interface()
+    second = Interface()
+
+    assert first.test is first.test
+    assert first.test is not second.test
+    assert first.test._owner is first
+    assert second.test._owner is second
+
+
+def test_ModelFactory_class_access_returns_descriptor():
+    assert isinstance(Interface.test, cruds.interface.ModelFactory)
+
+
 def test__create_interface_v1_with_no_package():
     """
     Create an Interface from the factory using Version 1.
