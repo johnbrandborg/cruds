@@ -5,6 +5,8 @@ Unreleased
 ----------
 
 Features:
+ - Add a Kolleno Open API v1 Interface with hierarchical CRUD, pagination,
+   custom-field, relationship, and file operations.
  - Planhat: add ``Deal``, ``Line_Item``, and ``Product`` models.
  - Planhat: support analytics-only clients without a main API token.
  - Planhat: support model-specific list filters and optional bulk error raising.
