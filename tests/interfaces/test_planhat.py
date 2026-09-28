@@ -24,7 +24,6 @@ from cruds.interfaces.planhat.logic import (
     create_activity,
     delete,
     duplicate,
-    epoc_days_format,
     epoch_days_format,
     get_by_id,
     get_dimension_data,
@@ -125,7 +124,6 @@ def planhat_model():
         create = create
         create_activity = create_activity
         delete = delete
-        epoc_days_format = epoc_days_format
         epoch_days_format = epoch_days_format
         get_by_id = get_by_id
         get_dimension_data = get_dimension_data
@@ -305,15 +303,6 @@ def test_Planhat_client_preserves_structured_http_bulk_errors(planhat):
         planhat.client._process_resp("PUT", response)
 
     assert set(excinfo.value.errors) == {"createdErrors", "permissionErrors"}
-
-
-def test_Model_epoc_days_format(planhat_model):
-    """
-    Check that Epoc days converts datetime strings to the correct int value
-    """
-
-    assert planhat_model.epoc_days_format("1975-06-01") == 1977
-    assert planhat_model.epoc_days_format("2022-04-15") == 19097
 
 
 def test_Model_epoch_days_format(planhat_model):

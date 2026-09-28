@@ -215,7 +215,6 @@ api:
             https://analytics.planhat.com.
         methods:
           - epoch_days_format
-          - epoc_days_format
           - get_dimension_data
           - bulk_insert_metrics
         uri: dimensiondata

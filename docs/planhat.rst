@@ -79,7 +79,6 @@ There are model-specific exceptions:
 **Metrics Model:**
 
 * ``epoch_days_format()`` - Convert dates to epoch days format
-* ``epoc_days_format()`` - Backward-compatible alias for the original misspelling
 * ``get_dimension_data()`` - Retrieve time-series metrics data
 * ``bulk_insert_metrics()`` - Batch insert metrics with auto-chunking
 

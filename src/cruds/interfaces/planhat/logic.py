@@ -82,11 +82,6 @@ def epoch_days_format(date: str, reference: str = "1970-01-01") -> int:
     return (datetime.fromisoformat(date) - datetime.fromisoformat(reference)).days
 
 
-def epoc_days_format(self, date: str, reference: str = "1970-01-01") -> int:
-    """Backward-compatible alias for :meth:`epoch_days_format`."""
-    return self.epoch_days_format(date, reference)
-
-
 @property
 def tenant_token(self) -> str:
     if self.__tenant_token is None:
