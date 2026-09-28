@@ -26,32 +26,42 @@ class ModelFactory:
     def __set_name__(self, owner: object, name: str) -> None:
         self.owner = owner
         self.name = name
+        self.cache_name = f"_{name}_model"
 
     def __delete__(self, obj) -> None:
         """
-        Remove the Model Class so it can be recreated.
+        Remove this interface instance's model so it can be recreated.
         """
-        del self.model
+        obj.__dict__.pop(self.cache_name, None)
 
     def __get__(self, obj: object, objtype=None) -> Any:
         """
-        Create a Model Class with the owner for client access, and the URI
-        for making CRUDs to the API.
-        """
-        if not hasattr(self, "model"):
-            Model: Any = type(
-                self.name,
-                (object,),
-                {
-                    "_owner": obj,
-                    "_uri": self.uri,
-                    **self.methods,
-                },
-            )
-            Model.__doc__ = self.docstring
-            self.model = Model()
+        Create a model bound to one interface instance.
 
-        return self.model
+        Models are cached on the interface instance, rather than on this
+        descriptor, so separate API clients cannot share owners or credentials.
+        """
+        if obj is None:
+            return self
+
+        if self.cache_name not in obj.__dict__:
+            if not hasattr(self, "model_class"):
+                Model: Any = type(
+                    self.name,
+                    (object,),
+                    {
+                        "_uri": self.uri,
+                        **self.methods,
+                    },
+                )
+                Model.__doc__ = self.docstring
+                self.model_class = Model
+
+            model = self.model_class()
+            model._owner = obj
+            obj.__dict__[self.cache_name] = model
+
+        return obj.__dict__[self.cache_name]
 
     def __set__(self, obj, value) -> None:
         """

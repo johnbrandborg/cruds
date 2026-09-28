@@ -1,6 +1,21 @@
 Changelog
 =========
 
+Unreleased
+----------
+
+Features:
+ - Planhat: add ``Deal``, ``Line_Item``, and ``Product`` models.
+ - Planhat: support analytics-only clients without a main API token.
+ - Planhat: support model-specific list filters and optional bulk error raising.
+
+Fixes:
+ - Isolate generated model instances and credentials per interface client.
+ - Retain bulk responses on the owning Planhat client and report all error categories.
+ - Validate bulk chunk sizes, preserve structured HTTP errors, and safely size analytics
+   payloads.
+ - Harden pagination and serialize lean-company status filters as documented by Planhat.
+
 Release 1.7.0 (March 25, 2026)
 -------------------------------
 

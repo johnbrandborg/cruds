@@ -1,9 +1,8 @@
 Planhat
 =======
 
-Planhat is a comprehensive customer success platform with immense capabilities. CRUDs offers a
-full implementation of the Planhat platform as an Interface, providing complete API coverage
-for all major Planhat features and data models.
+Planhat is a customer success platform. CRUDs provides a Planhat Interface for the models and
+operations listed below.
 
 **Official Documentation URL:** https://www.planhat.com/developers
 
@@ -14,8 +13,9 @@ for all major Planhat features and data models.
 
 **Authentication:**
 
-* Primary authentication via API token
-* Secondary authentication via tenant token for analytics endpoints
+* API token authentication for the main API
+* Tenant token authentication for analytics endpoints
+* Analytics-only clients may omit the API token
 * Configurable rate limiting (default: 200 calls per minute)
 
 **Core Features Supported:**
@@ -32,6 +32,9 @@ for all major Planhat features and data models.
 * **Invoice** - Track billing and invoicing history
 * **Issue** - Bug reports and feature requests (Jira integration support)
 * **License** - Subscription management with MRR/ARR calculations
+* **Deal** - Sales opportunities and contracts
+* **Line_Item** - Subscription and fee line items attached to deals
+* **Product** - Reusable subscription and fee templates
 * **Metrics** - Dimension data for customer success metrics
 * **NPS** - Net Promoter Score survey responses and scoring
 * **Note** - Manual notes and conversation logging
@@ -48,7 +51,7 @@ for all major Planhat features and data models.
 
 **Standard CRUD Operations:**
 
-All models support the following operations:
+Most main-API models support the following operations:
 
 * ``create()`` - Create new records
 * ``update()`` - Update existing records by ID, External ID, or Source ID
@@ -56,6 +59,16 @@ All models support the following operations:
 * ``get_list()`` - Retrieve paginated lists with filtering and sorting
 * ``delete()`` - Remove records
 * ``bulk_upsert()`` - Batch create/update operations (up to 5,000 items per request)
+
+``get_list()`` preserves the historical ``"name, companyId"`` field selection by default.
+Pass ``select=None`` to retrieve all fields, including for models with different schemas such
+as ``Line_Item`` and ``Product``.
+
+There are model-specific exceptions:
+
+* ``Custom_Field`` does not expose ``bulk_upsert()``
+* ``Ticket`` exposes ``bulk_upsert()``, ``get_list()``, and ``delete()``
+* ``Metrics`` and ``user_activity`` use the analytics operations documented below
 
 **Specialized Methods:**
 
@@ -65,7 +78,7 @@ All models support the following operations:
 
 **Metrics Model:**
 
-* ``epoc_days_format()`` - Convert dates to epoch days format
+* ``epoch_days_format()`` - Convert dates to epoch days format
 * ``get_dimension_data()`` - Retrieve time-series metrics data
 * ``bulk_insert_metrics()`` - Batch insert metrics with auto-chunking
 
@@ -79,9 +92,11 @@ All models support the following operations:
 **Bulk Operations:**
 
 * Auto-chunking for large datasets
-* Configurable chunk sizes
-* Response aggregation and error handling
-* Rate limiting with automatic delays
+* Main-API bulk chunk sizes validated against Planhat's 5,000-item limit
+* Aggregated responses are retained on the owning ``Planhat`` client
+* Optional ``raise_on_error=True`` for bulk response validation
+* Main-API rate limiting with delays between requests
+* Analytics payload sizing below Planhat's 32 MB body limit
 
 **Data Formatting:**
 
@@ -101,7 +116,7 @@ All models support the following operations:
 **Error Handling:**
 
 * Custom exception classes for bulk operations
-* Comprehensive error reporting
+* Aggregated bulk error reporting through ``PlanhatUpsertError``
 * Automatic retry mechanisms
 
 Example Usage:
@@ -112,8 +127,8 @@ Example Usage:
     >>>
     >>> # Initialize with API token and optional tenant token
     >>> planhat = Planhat(
-    ...     api_token="hJA4eO3tJPhDck1aKLvQ5osvNUfKYdJ7H",
-    ...     tenant_token="1d5df0f5-f217-49da-8997-2878f5986a9f"
+    ...     api_token="your-api-token",
+    ...     tenant_token="your-tenant-token"
     ... )
     >>>
     >>> # Get comprehensive help
@@ -127,7 +142,10 @@ Example Usage:
     ...     {"name": "Premium Plan", "companyId": "extid-123", "value": 1000},
     ...     {"name": "Basic Plan", "companyId": "extid-456", "value": 500}
     ... ]
-    >>> result = planhat.license.bulk_upsert(licenses_data)
+    >>> result = planhat.license.bulk_upsert(
+    ...     licenses_data,
+    ...     raise_on_error=True,
+    ... )
     >>>
     >>> # Track user activity
     >>> activity_data = {
