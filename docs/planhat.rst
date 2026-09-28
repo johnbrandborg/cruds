@@ -1,22 +1,58 @@
 Planhat
 =======
 
-Planhat is a customer success platform. CRUDs provides a Planhat Interface for the models and
-operations listed below.
+Planhat is a customer success platform. CRUDs provides a Planhat Interface for
+the models and operations listed below.
 
-**Official Documentation URL:** https://www.planhat.com/developers
+See Planhat's `official developer documentation
+<https://www.planhat.com/developers>`_ for API details.
 
-**API Endpoints:**
+API endpoints
+-------------
 
 * Main API: https://api.planhat.com/
 * Analytics API: https://analytics.planhat.com/
 
-**Authentication:**
+Authentication
+--------------
 
 * API token authentication for the main API
 * Tenant token authentication for analytics endpoints
 * Analytics-only clients may omit the API token
 * Configurable rate limiting (default: 200 calls per minute)
+
+Getting started
+---------------
+
+Create a client with your API token, then access each model as an attribute:
+
+.. code-block:: python
+
+    from cruds.interfaces.planhat import Planhat
+
+    planhat = Planhat(api_token="your-api-token")
+
+    company = planhat.company.get_by_id("extid-your-company-id")
+
+    for page in planhat.company.get_list(limit=100, select=None):
+        for company in page:
+            print(company["_id"], company["name"])
+
+``get_list()`` yields one page at a time and continues until Planhat returns an
+empty page. Use ``max_requests`` to limit the number of API requests:
+
+.. code-block:: python
+
+    first_page = next(planhat.company.get_list(max_requests=1))
+
+Supply a tenant token when using analytics models:
+
+.. code-block:: python
+
+    planhat = Planhat(
+        api_token="your-api-token",
+        tenant_token="your-tenant-token",
+    )
 
 **Core Features Supported:**
 
@@ -119,51 +155,32 @@ There are model-specific exceptions:
 * Aggregated bulk error reporting through ``PlanhatUpsertError``
 * Automatic retry mechanisms
 
-Example Usage:
+Specialized examples
+--------------------
 
 .. code-block:: python
 
-    >>> from cruds.interfaces.planhat import Planhat
-    >>>
-    >>> # Initialize with API token and optional tenant token
-    >>> planhat = Planhat(
-    ...     api_token="your-api-token",
-    ...     tenant_token="your-tenant-token"
-    ... )
-    >>>
-    >>> # Get comprehensive help
-    >>> help(planhat)
-    >>>
-    >>> # Retrieve a company by external ID
-    >>> company = planhat.company.get_by_id("extid-21432948")
-    >>>
-    >>> # Bulk upsert licenses
-    >>> licenses_data = [
-    ...     {"name": "Premium Plan", "companyId": "extid-123", "value": 1000},
-    ...     {"name": "Basic Plan", "companyId": "extid-456", "value": 500}
-    ... ]
-    >>> result = planhat.license.bulk_upsert(
-    ...     licenses_data,
-    ...     raise_on_error=True,
-    ... )
-    >>>
-    >>> # Track user activity
-    >>> activity_data = {
-    ...     "event": "login",
-    ...     "userId": "user123",
-    ...     "companyId": "extid-123",
-    ...     "timestamp": "2024-01-15T10:30:00Z"
-    ... }
-    >>> planhat.user_activity.create_activity(activity_data)
-    >>>
-    >>> # Insert metrics data
-    >>> metrics_data = {
-    ...     "dimensionId": "daily_logins",
-    ...     "companyId": "extid-123",
-    ...     "value": 150,
-    ...     "time": "2024-01-15T00:00:00Z"
-    ... }
-    >>> planhat.metrics.bulk_insert_metrics([metrics_data])
+    licenses = [
+        {"name": "Premium Plan", "companyId": "extid-123", "value": 1000},
+        {"name": "Basic Plan", "companyId": "extid-456", "value": 500},
+    ]
+    result = planhat.license.bulk_upsert(licenses, raise_on_error=True)
+
+    activity = {
+        "event": "login",
+        "userId": "user123",
+        "companyId": "extid-123",
+        "timestamp": "2024-01-15T10:30:00Z",
+    }
+    planhat.user_activity.create_activity(activity)
+
+    metrics = {
+        "dimensionId": "daily_logins",
+        "companyId": "extid-123",
+        "value": 150,
+        "time": "2024-01-15T00:00:00Z",
+    }
+    planhat.metrics.bulk_insert_metrics([metrics])
 
 The configuration file for this Interface can be found on
 `Github <https://github.com/johnbrandborg/cruds/blob/main/src/cruds/interfaces/planhat/configuration.yaml>`_.
