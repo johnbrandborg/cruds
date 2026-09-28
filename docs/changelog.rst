@@ -1,8 +1,8 @@
 Changelog
 =========
 
-Unreleased
-----------
+Release 1.8.0 (September 28, 2026)
+-----------------------------------
 
 Features:
  - Add a Kolleno Open API v1 Interface with hierarchical CRUD, pagination,
