@@ -2,6 +2,7 @@
 Tests for Core components in CRUDs
 """
 
+from io import BytesIO
 from unittest import mock
 
 import pytest
@@ -133,6 +134,182 @@ def test_Client_read_operation(crud_api):
         headers=request_headers,
     )
     assert resp.data == b'{"name": "test"}'
+
+
+def download_response(
+    body=b"file content",
+    *,
+    content_type="application/octet-stream",
+    content_disposition=None,
+    request_url="https://localhost/files/download",
+    status=200,
+):
+    """Build a streaming response for download tests."""
+    headers = {"Content-Type": content_type}
+    if content_disposition is not None:
+        headers["Content-Disposition"] = content_disposition
+    return urllib3.HTTPResponse(
+        body=BytesIO(body),
+        headers=headers,
+        status=status,
+        request_url=request_url,
+        preload_content=False,
+    )
+
+
+def test_Client_download_uses_content_disposition_filename(tmp_path):
+    """Download a response using its standards-based attachment filename."""
+    api = cruds.Client(host="https://localhost", retries=0)
+    response = download_response(
+        body=b"%PDF-content",
+        content_type="application/pdf",
+        content_disposition='attachment; filename="invoice.pdf"',
+    )
+    api.manager.request = mock.Mock(return_value=response)  # ty: ignore[invalid-assignment]
+
+    result = api.download(
+        "invoice/1",
+        path=tmp_path,
+        params={"id_from": "source"},
+    )
+
+    assert result == tmp_path / "invoice.pdf"
+    assert result.read_bytes() == b"%PDF-content"
+    api.manager.request.assert_called_once_with(
+        "GET",
+        "https://localhost/invoice/1",
+        fields={"id_from": "source"},
+        headers=request_headers,
+        preload_content=False,
+    )
+
+
+def test_Client_download_defaults_to_current_directory(tmp_path, monkeypatch):
+    """Use the current working directory when no download path is supplied."""
+    monkeypatch.chdir(tmp_path)
+    api = cruds.Client(host="https://localhost", retries=0)
+    api.manager.request = mock.Mock(  # ty: ignore[invalid-assignment]
+        return_value=download_response(request_url="https://localhost/files/data.csv")
+    )
+
+    result = api.download("files/data.csv")
+
+    assert result == tmp_path / "data.csv"
+    assert result.read_bytes() == b"file content"
+
+
+def test_Client_download_prefers_extended_filename_and_sanitizes_path(tmp_path):
+    """Prefer RFC 6266 filename* and remove advisory path components."""
+    api = cruds.Client(host="https://localhost", retries=0)
+    api.manager.request = mock.Mock(  # ty: ignore[invalid-assignment]
+        return_value=download_response(
+            content_disposition=(
+                "attachment; filename=legacy.pdf; "
+                "filename*=UTF-8''folder%2Fcaf%C3%A9.pdf"
+            )
+        )
+    )
+
+    result = api.download("files/download", path=tmp_path)
+
+    assert result == tmp_path / "café.pdf"
+
+
+def test_Client_download_writes_json_without_deserializing(tmp_path):
+    """Stream JSON to disk without applying the Client serialization setting."""
+    api = cruds.Client(host="https://localhost", retries=0)
+    api.manager.request = mock.Mock(  # ty: ignore[invalid-assignment]
+        return_value=download_response(
+            body=b'{"results": [{"id": 1}]}',
+            content_type="application/json",
+            content_disposition='attachment; filename="export.json"',
+        )
+    )
+
+    result = api.download("files/download", path=tmp_path)
+
+    assert result == tmp_path / "export.json"
+    assert result.read_bytes() == b'{"results": [{"id": 1}]}'
+
+
+def test_Client_download_uses_explicit_filename_as_final_fallback(tmp_path):
+    """Allow a caller-supplied name when headers and URL provide none."""
+    api = cruds.Client(host="https://localhost", retries=0)
+    api.manager.request = mock.Mock(  # ty: ignore[invalid-assignment]
+        return_value=download_response(request_url="https://localhost/files/")
+    )
+
+    result = api.download("files/", path=tmp_path, filename="../report.bin")
+
+    assert result == tmp_path / "report.bin"
+
+
+def test_Client_download_requires_usable_filename(tmp_path):
+    """Do not invent a filename when the response does not supply one."""
+    api = cruds.Client(host="https://localhost", retries=0)
+    api.manager.request = mock.Mock(  # ty: ignore[invalid-assignment]
+        return_value=download_response(request_url="https://localhost/files/")
+    )
+
+    with pytest.raises(ValueError, match="usable filename"):
+        api.download("files/", path=tmp_path)
+
+
+def test_Client_download_does_not_overwrite_existing_file(tmp_path):
+    """Protect an existing local file from an accidental overwrite."""
+    existing = tmp_path / "invoice.pdf"
+    existing.write_bytes(b"original")
+    api = cruds.Client(host="https://localhost", retries=0)
+    api.manager.request = mock.Mock(  # ty: ignore[invalid-assignment]
+        return_value=download_response(
+            content_disposition='attachment; filename="invoice.pdf"'
+        )
+    )
+
+    with pytest.raises(FileExistsError):
+        api.download("files/download", path=tmp_path)
+
+    assert existing.read_bytes() == b"original"
+
+
+def test_Client_download_removes_partial_file_after_stream_failure(tmp_path):
+    """Remove a file if streaming fails after the destination is created."""
+    api = cruds.Client(host="https://localhost", retries=0)
+    response = download_response(
+        content_disposition='attachment; filename="invoice.pdf"'
+    )
+    response.stream = mock.Mock(side_effect=RuntimeError("connection lost"))
+    api.manager.request = mock.Mock(return_value=response)  # ty: ignore[invalid-assignment]
+
+    with pytest.raises(RuntimeError, match="connection lost"):
+        api.download("files/download", path=tmp_path)
+
+    assert not (tmp_path / "invoice.pdf").exists()
+
+
+def test_Client_download_applies_normal_status_handling(tmp_path):
+    """Raise configured HTTP errors before attempting to write a download."""
+    api = cruds.Client(host="https://localhost", retries=0)
+    api.manager.request = mock.Mock(  # ty: ignore[invalid-assignment]
+        return_value=download_response(
+            body=b'{"detail": "Not found"}',
+            content_type="application/json",
+            status=404,
+        )
+    )
+
+    with pytest.raises(urllib3.exceptions.HTTPError, match="status code 404"):
+        api.download("files/download", path=tmp_path)
+
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_Client_download_requires_directory(tmp_path):
+    """Reject download paths that do not identify an existing directory."""
+    api = cruds.Client(host="https://localhost", retries=0)
+
+    with pytest.raises(NotADirectoryError):
+        api.download("files/download", path=tmp_path / "missing")
 
 
 def test_Client_update_operation(crud_api):
@@ -300,9 +477,7 @@ def test_Client_update_operation_files_takes_precedence(crud_api):
 def test_Client_update_operation_with_files_and_replace(crud_api):
     """Check that update() with files and replace=True uses PUT method."""
     files = {"file": ("data.csv", b"a,b,c\n1,2,3", "text/csv")}
-    resp = crud_api.update(
-        "upload/endpoint", data=None, files=files, replace=True
-    )
+    resp = crud_api.update("upload/endpoint", data=None, files=files, replace=True)
 
     crud_api.manager.request.assert_called_with(
         "PUT",

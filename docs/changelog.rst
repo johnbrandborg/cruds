@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Unreleased
+----------
+
+Features:
+ - Add ``Client.download()`` for streaming responses to the local filesystem
+   with standards-based filename handling.
+ - Kolleno: write invoice PDFs, credit-note PDFs, and report files through the
+   new download operation.
+
 Release 1.8.1 (September 30, 2026)
 -----------------------------------
 

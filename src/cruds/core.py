@@ -3,11 +3,14 @@ Clients that can be used for easily accessing RESTful APIs
 """
 
 import abc
+from email.message import Message
 import logging
 from json.decoder import JSONDecodeError
+from pathlib import Path
+import re
 import sys
 from typing import Any, Final
-from urllib.parse import urlencode
+from urllib.parse import unquote, unquote_to_bytes, urlencode, urlsplit
 
 import certifi
 import urllib3
@@ -65,6 +68,8 @@ class Client:
         Makes a POST request to the API Server
     read:
         Makes a GET request to the API Server
+    download:
+        Downloads a response to the local filesystem
     update:
         Makes a PATCH or PUT request to the API Server
     delete:
@@ -256,6 +261,62 @@ class Client:
         )
         return self._process_resp(method, response)
 
+    def download(
+        self,
+        uri: str,
+        path: str | Path | None = None,
+        filename: str | None = None,
+        params: dict[Any, Any] | None = None,
+    ) -> Path:
+        """
+        Download a response to the local filesystem.
+
+        The filename is taken from the standards-based Content-Disposition
+        header, then the final response URL, and finally the optional filename
+        argument. The current working directory is used when path is omitted.
+        """
+        url = self.host + uri.lstrip("/")
+        method = "GET"
+        destination = Path.cwd() if path is None else Path(path)
+        logger.info(f"API Download Operation from {url} to {destination}")
+
+        if not destination.is_dir():
+            raise NotADirectoryError(f"Download path is not a directory: {destination}")
+
+        self._check_auth()
+        response = self.manager.request(
+            method,
+            url,
+            fields=params,
+            headers=self.request_headers,
+            preload_content=False,
+        )
+
+        try:
+            self._raise_for_status(method, response)
+            response_url = response.geturl() or url
+            response_filename = self._download_filename(
+                response.headers.get("Content-Disposition"),
+                response_url,
+                filename,
+            )
+            output_path = destination / response_filename
+
+            created = False
+            try:
+                with output_path.open("xb") as output:
+                    created = True
+                    for chunk in response.stream(amt=64 * 1024):
+                        output.write(chunk)
+            except BaseException:
+                if created:
+                    output_path.unlink(missing_ok=True)
+                raise
+
+            return output_path
+        finally:
+            response.release_conn()
+
     def update(
         self,
         uri: str,
@@ -370,6 +431,34 @@ class Client:
             f"Memory: {sys.getsizeof(response.data)} Bytes"
         )
 
+        self._raise_for_status(method, response)
+
+        if self.serialize and response.data is not None:
+            content_type = response.headers.get("Content-Type", "").lower()
+            is_json_content_type = "application/json" in content_type
+
+            # Try to parse as JSON regardless of content-type
+            # This handles APIs that return JSON but don't set the correct content-type
+            try:
+                return response.json()
+            except JSONDecodeError as e:
+                if is_json_content_type:
+                    logger.warning(f"Failed to parse JSON response: {e}")
+                else:
+                    logger.debug(
+                        f"Response content type '{content_type}' is not JSON and "
+                        f"response data could not be parsed as JSON"
+                    )
+                return response.data
+
+        return response.data
+
+    def _raise_for_status(
+        self,
+        method: str,
+        response: urllib3.response.BaseHTTPResponse,
+    ) -> None:
+        """Raise an HTTP error according to this client's status policy."""
         if self.raise_status and response.status not in self.status_ignore:
             if 400 <= response.status < 500:
                 error_type = "Client"
@@ -391,25 +480,62 @@ class Client:
                 )
                 raise urllib3.exceptions.HTTPError(msg)
 
-        if self.serialize and response.data is not None:
-            content_type = response.headers.get("Content-Type", "").lower()
-            is_json_content_type = "application/json" in content_type
+    @classmethod
+    def _download_filename(
+        cls,
+        content_disposition: str | None,
+        response_url: str,
+        fallback: str | None,
+    ) -> str:
+        """Select and sanitize a filename for a downloaded response."""
+        candidates = [
+            cls._content_disposition_filename(content_disposition),
+            unquote(urlsplit(response_url).path.rsplit("/", 1)[-1]),
+            fallback,
+        ]
+        for candidate in candidates:
+            if candidate and (safe_name := cls._sanitize_filename(candidate)):
+                return safe_name
+        raise ValueError(
+            "Download response did not provide a usable filename; "
+            "supply filename explicitly"
+        )
 
-            # Try to parse as JSON regardless of content-type
-            # This handles APIs that return JSON but don't set the correct content-type
+    @staticmethod
+    def _content_disposition_filename(value: str | None) -> str | None:
+        """Extract filename* or filename from an RFC 6266 header."""
+        if not value:
+            return None
+
+        extended = re.search(
+            r"(?:^|;)\s*filename\*\s*=\s*(?:\"([^\"]*)\"|([^;]*))",
+            value,
+            flags=re.IGNORECASE,
+        )
+        if extended:
+            encoded = next(
+                part for part in extended.groups() if part is not None
+            ).strip()
             try:
-                return response.json()
-            except JSONDecodeError as e:
-                if is_json_content_type:
-                    logger.warning(f"Failed to parse JSON response: {e}")
-                else:
-                    logger.debug(
-                        f"Response content type '{content_type}' is not JSON and "
-                        f"response data could not be parsed as JSON"
-                    )
-                return response.data
+                charset, _, encoded_name = encoded.split("'", 2)
+                return unquote_to_bytes(encoded_name).decode(charset or "utf-8")
+            except (LookupError, UnicodeDecodeError, ValueError):
+                pass
 
-        return response.data
+        message = Message()
+        message["Content-Disposition"] = value
+        return message.get_filename()
+
+    @staticmethod
+    def _sanitize_filename(value: str) -> str:
+        """Remove path and control characters from an advisory filename."""
+        basename = value.replace("\\", "/").rsplit("/", 1)[-1]
+        basename = "".join(
+            character
+            for character in basename
+            if ord(character) >= 32 and ord(character) != 127
+        ).strip()
+        return "" if basename in {"", ".", ".."} else basename
 
     def _check_auth(self):
         if (

@@ -82,8 +82,8 @@ Use ``get_all()`` to iterate through every result using offset pagination:
 Files and specialized resources
 -------------------------------
 
-Invoice PDFs support multipart upload. Download resources return bytes when
-Kolleno responds with a file:
+Invoice PDFs support multipart upload. Download resources write files to the
+current working directory by default, using the filename supplied by Kolleno:
 
 .. code-block:: python
 
@@ -99,15 +99,24 @@ Kolleno responds with a file:
         },
     )
 
-    invoice_pdf = kolleno.invoice_pdf_download.download(
+    invoice_pdf_path = kolleno.invoice_pdf_download.download(
         "company-id",
         "invoice-id",
     )
-    credit_note_pdf = kolleno.credit_note_pdf.download(
+    credit_note_pdf_path = kolleno.credit_note_pdf.download(
         "company-id",
         "credit-note-id",
+        path="./downloads",
     )
-    report = kolleno.report_file.download("company-id", "report-file-id")
+    report_path = kolleno.report_file.download(
+        "company-id",
+        "report-file-id",
+        path="./downloads",
+    )
+
+Each download returns a ``pathlib.Path``, and existing local files are not
+overwritten. Use the optional ``filename`` argument when a response does not
+provide a filename in ``Content-Disposition`` or its final URL.
 
 Models
 ------
