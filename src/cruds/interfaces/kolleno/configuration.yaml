@@ -7,7 +7,6 @@ api:
       Access Kolleno Open API v1 resources.
 
       kolleno = Kolleno(
-          domain_name="https://your-kolleno-api-host/",
           client_id="your-client-id",
           client_secret="your-client-secret",
       )

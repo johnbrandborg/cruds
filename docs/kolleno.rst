@@ -10,15 +10,14 @@ Authentication
 
 Kolleno API keys contain a client ID and client secret. The Interface sends
 them using Kolleno's ``Authorization: API client_id:client_secret`` header.
-The published collection leaves its ``domain_name`` variable blank, so supply
-the API base URL configured for your account:
+By default, requests are sent to ``https://api.kolleno.com/v1``. You can
+override ``domain_name`` if your account uses a different API base URL.
 
 .. code-block:: python
 
     from cruds.interfaces.kolleno import Kolleno
 
     kolleno = Kolleno(
-        domain_name="https://your-kolleno-api-host/",
         client_id="your-client-id",
         client_secret="your-client-secret",
     )

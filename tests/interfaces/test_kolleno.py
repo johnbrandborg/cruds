@@ -7,6 +7,7 @@ from cruds.interfaces.kolleno import Kolleno  # ty: ignore[unresolved-import]
 
 
 DOMAIN_NAME = "https://api.example.test/v1/"
+DEFAULT_DOMAIN_NAME = "https://api.kolleno.com/v1/"
 CLIENT_ID = "client-id"
 CLIENT_SECRET = "client-secret"
 
@@ -22,6 +23,12 @@ def test_Kolleno_initializes_client_and_api_authentication(kolleno):
     assert (
         kolleno.client.request_headers["Authorization"] == "API client-id:client-secret"
     )
+
+
+def test_Kolleno_uses_default_domain_name():
+    kolleno = Kolleno(client_id=CLIENT_ID, client_secret=CLIENT_SECRET)
+
+    assert kolleno.client.host == DEFAULT_DOMAIN_NAME
 
 
 def test_Kolleno_passes_transport_options_to_client():
