@@ -474,6 +474,48 @@ as data, and the return is bytes type data.
     If there is a need to expand on the SerDes content types, please raise a
     issue in the Github repository so the project is aware of it.
 
+File Downloads
+--------------
+
+Use ``download()`` for responses that should be streamed directly to the local
+filesystem. It performs a GET request using the Client's existing
+authentication, retry, redirect, timeout, and status handling:
+
+.. code-block:: python
+
+    downloaded = api.download("reports/123/")
+    print(downloaded)  # Current working directory / server-provided filename
+
+The current working directory is used by default. Supply ``path`` to choose an
+existing destination directory:
+
+.. code-block:: python
+
+    downloaded = api.download(
+        "reports/123/",
+        path="./downloads",
+        params={"format": "pdf"},
+    )
+
+The filename is selected from the standards-based ``Content-Disposition``
+header, preferring ``filename*`` over ``filename``. If the header does not
+provide a filename, the final URL after redirects is used. A final explicit
+fallback can be supplied with ``filename``:
+
+.. code-block:: python
+
+    downloaded = api.download(
+        "reports/123/",
+        path="./downloads",
+        filename="report.pdf",
+    )
+
+The returned value is a ``pathlib.Path``. Filenames are sanitized before use,
+and existing files are not overwritten. Missing filenames and paths that are
+not existing directories raise errors without leaving a partial download
+behind. Responses are written without deserialization, so large JSON exports
+can be streamed to disk as readily as binary files.
+
 Multipart File Uploads
 ----------------------
 

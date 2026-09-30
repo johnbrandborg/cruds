@@ -1,3 +1,4 @@
+from pathlib import Path
 from unittest.mock import Mock, call
 
 import pytest
@@ -174,14 +175,22 @@ def test_Kolleno_invoice_pdf_supports_multipart_upload(kolleno):
     )
 
 
-def test_Kolleno_download_uses_download_resource_path(kolleno):
-    kolleno.client.read = Mock(return_value=b"pdf")
+def test_Kolleno_download_uses_client_download(kolleno, tmp_path):
+    output = tmp_path / "invoice.pdf"
+    kolleno.client.download = Mock(return_value=output)
 
-    result = kolleno.invoice_pdf_download.download("company-id", "invoice-id")
+    result = kolleno.invoice_pdf_download.download(
+        "company-id",
+        "invoice-id",
+        path=tmp_path,
+        filename="invoice.pdf",
+    )
 
-    assert result == b"pdf"
-    kolleno.client.read.assert_called_once_with(
+    assert result == Path(output)
+    kolleno.client.download.assert_called_once_with(
         "invoice/pdf/company-id/invoice-id/",
+        path=tmp_path,
+        filename="invoice.pdf",
         params=None,
     )
 

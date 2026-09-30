@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from pathlib import Path
 from typing import Any, Final
 from urllib.parse import quote
 
@@ -125,7 +126,16 @@ def delete(
 
 
 def download(
-    self, *path: str, params: dict[Any, Any] | None = None
-) -> dict[Any, Any] | bytes:
-    """Download a PDF or report file."""
-    return self._owner.client.read(self._build_uri(*path), params=params)
+    self,
+    *resource_path: str,
+    path: str | Path | None = None,
+    filename: str | None = None,
+    params: dict[Any, Any] | None = None,
+) -> Path:
+    """Download a PDF or report file to the local filesystem."""
+    return self._owner.client.download(
+        self._build_uri(*resource_path),
+        path=path,
+        filename=filename,
+        params=params,
+    )
