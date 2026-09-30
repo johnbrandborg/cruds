@@ -32,13 +32,19 @@ appear in the documented URL:
 
     # GET /company/
     companies = kolleno.company.get_list(limit=100, offset=0)
+    company = next(
+        company
+        for company in companies["results"]
+        if company["name"] == "Example Company"
+    )
+    company_id = company["id"]
 
     # GET /customer/{company}/{customer}/
-    customer = kolleno.customer.get_by_id("company-id", "customer-id")
+    customer = kolleno.customer.get_by_id(company_id, "customer-id")
 
     # POST /invoice/{company}/
     invoice = kolleno.invoice.create(
-        "company-id",
+        company_id,
         data={
             "customer": "customer-id",
             "amount": "100.00",
@@ -48,7 +54,7 @@ appear in the documented URL:
 
     # PATCH /person/company/{company}/{person}/
     person = kolleno.person.update(
-        "company-id",
+        company_id,
         "person-id",
         data={"primary": True},
     )
@@ -62,7 +68,7 @@ passed as keyword arguments to ``get_list()``:
 .. code-block:: python
 
     customers = kolleno.customer.get_list(
-        "company-id",
+        company_id,
         fields="source_id,balance",
         limit=50,
         offset=0,
