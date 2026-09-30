@@ -1,15 +1,18 @@
 from collections.abc import Generator
-from typing import Any
+from typing import Any, Final
 from urllib.parse import quote
 
 from cruds.core import Client, _FieldValue
 
 
+KOLLENO_API_HOST: Final = "https://api.kolleno.com/v1"
+
+
 def __init__(
     self,
-    domain_name: str,
-    client_id: str,
-    client_secret: str,
+    domain_name: str = KOLLENO_API_HOST,
+    client_id: str | None = None,
+    client_secret: str | None = None,
     **kwargs: Any,
 ) -> None:
     """Create a Kolleno client using credentials from an Open API key."""
@@ -21,7 +24,7 @@ def __init__(
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"{name} must be a non-empty string")
 
-    if any(character in client_id + client_secret for character in "\r\n"):
+    if any(character in f"{client_id}{client_secret}" for character in "\r\n"):
         raise ValueError("Kolleno credentials cannot contain line breaks")
 
     self.client = Client(host=domain_name, **kwargs)
