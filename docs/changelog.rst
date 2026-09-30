@@ -1,6 +1,12 @@
 Changelog
 =========
 
+Release 1.8.1 (September 30, 2026)
+-----------------------------------
+
+Fixes:
+ - Kolleno: default ``domain_name`` to ``https://api.kolleno.com/v1``.
+
 Release 1.8.0 (September 28, 2026)
 -----------------------------------
 
