@@ -139,3 +139,10 @@ def download(
         filename=filename,
         params=params,
     )
+
+
+def get_status(
+    self, *path: str, params: dict[Any, Any] | None = None
+) -> dict[Any, Any] | bytes:
+    """Retrieve the generation status of a report file."""
+    return self._owner.client.read(self._build_uri(*path, "status"), params=params)
