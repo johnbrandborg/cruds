@@ -55,6 +55,15 @@ api:
           - get_list
           - get_all
 
+      - name: Email_Sent
+        docstring: |
+          Emails sent to customers by Kolleno workflows or users.
+        uri: email-sent
+        methods:
+          - get_list
+          - get_all
+          - get_by_id
+
       - name: Customer
         docstring: |
           Customers belonging to a company.
@@ -152,7 +161,28 @@ api:
         methods:
           - get_list
           - get_all
+          - create
+          - get_status
           - download
+
+      - name: Report_Schedule
+        docstring: |
+          Scheduled report generation belonging to a company.
+        uri: report-schedule
+        methods:
+          - get_list
+          - get_all
+          - get_by_id
+          - create
+          - delete
+
+      - name: Report_Type
+        docstring: |
+          Report types available to a company.
+        uri: report-type
+        methods:
+          - get_list
+          - get_all
 
       - name: Tag
         docstring: |
@@ -173,6 +203,22 @@ api:
         docstring: |
           Timeline steps belonging to a company.
         uri: step
+        methods:
+          - get_list
+          - get_all
+
+      - name: Template
+        docstring: |
+          Message templates available to a company.
+        uri: template
+        methods:
+          - get_list
+          - get_all
+
+      - name: Workflow
+        docstring: |
+          Workflows belonging to a company.
+        uri: workflow
         methods:
           - get_list
           - get_all

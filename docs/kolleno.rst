@@ -68,6 +68,11 @@ passed as keyword arguments to ``get_list()``:
         offset=0,
     )
 
+This includes the current list filters, such as ``ref`` for customers and
+``payment_status``, ``payment_status__in``, and ``date_modified__gte`` for
+invoices. For retrieve, update, and delete operations, pass optional query
+parameters through the ``params`` argument.
+
 Pagination
 ----------
 
@@ -118,6 +123,29 @@ Each download returns a ``pathlib.Path``, and existing local files are not
 overwritten. Use the optional ``filename`` argument when a response does not
 provide a filename in ``Content-Disposition`` or its final URL.
 
+Reports
+-------
+
+The Interface supports Kolleno's asynchronous report generation flow:
+
+.. code-block:: python
+
+    report_types = kolleno.report_type.get_list("company-id")
+    report = kolleno.report_file.create(
+        "company-id",
+        data={
+            "var_name": "transactions_received_list",
+            "filters": {
+                "date_from": "2026-09-01",
+                "date_to": "2026-09-30",
+            },
+        },
+    )
+    status = kolleno.report_file.get_status("company-id", report["id"])
+
+Report schedules expose list, retrieve, create, and delete operations through
+``kolleno.report_schedule``.
+
 Models
 ------
 
@@ -127,13 +155,15 @@ The Interface includes:
 * ``card_detail`` and ``direct_debit_detail``
 * ``customer``, ``customer_portal``, and ``customer_custom_fields``
 * ``credit_note`` and ``credit_note_pdf``
+* ``email_sent``
 * ``invoice``, ``invoice_custom_fields``, ``invoice_pdf``, and
   ``invoice_pdf_download``
 * ``match``
 * ``person`` and ``person_invoice``
 * ``position_external``
-* ``report_file``
+* ``report_file``, ``report_schedule``, and ``report_type``
 * ``tag`` and ``tag_category``
+* ``template`` and ``workflow``
 * ``transaction``
 * ``timeline``
 

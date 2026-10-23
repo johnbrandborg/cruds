@@ -75,6 +75,7 @@ def test_Kolleno_models_are_isolated_between_clients():
         ("company", "company"),
         ("card_detail", "card-detail"),
         ("direct_debit_detail", "direct-debit-detail"),
+        ("email_sent", "email-sent"),
         ("customer", "customer"),
         ("customer_portal", "customer/portal-url"),
         ("customer_custom_fields", "customer/custom-fields"),
@@ -89,10 +90,14 @@ def test_Kolleno_models_are_isolated_between_clients():
         ("person_invoice", "person-invoice"),
         ("position_external", "position-external"),
         ("report_file", "report-file"),
+        ("report_schedule", "report-schedule"),
+        ("report_type", "report-type"),
         ("tag", "tag"),
         ("tag_category", "tag/category"),
+        ("template", "template"),
         ("transaction", "transaction"),
         ("timeline", "step"),
+        ("workflow", "workflow"),
     ],
 )
 def test_Kolleno_exposes_documented_models(kolleno, model_name, uri):
@@ -203,6 +208,30 @@ def test_Kolleno_customer_portal_uses_customer_query_parameter(kolleno):
     kolleno.client.read.assert_called_once_with(
         "customer/portal-url/company-id/",
         params={"customer": "customer-id"},
+    )
+
+
+def test_Kolleno_report_file_generation_and_status(kolleno):
+    kolleno.client.create = Mock(return_value={"id": "report-file-id"})
+    kolleno.client.read = Mock(return_value={"status": "completed"})
+
+    generated = kolleno.report_file.create(
+        "company-id",
+        data={"var_name": "transactions_received_list", "filters": {}},
+    )
+    status = kolleno.report_file.get_status("company-id", "report-file-id")
+
+    assert generated == {"id": "report-file-id"}
+    assert status == {"status": "completed"}
+    kolleno.client.create.assert_called_once_with(
+        "report-file/company-id/",
+        data={"var_name": "transactions_received_list", "filters": {}},
+        params=None,
+        files=None,
+    )
+    kolleno.client.read.assert_called_once_with(
+        "report-file/company-id/report-file-id/status/",
+        params=None,
     )
 
 

@@ -1,14 +1,16 @@
 Changelog
 =========
 
-Unreleased
-----------
+Release 1.9.0 (October 23, 2026)
+--------------------------------
 
 Features:
  - Add ``Client.download()`` for streaming responses to the local filesystem
    with standards-based filename handling.
  - Kolleno: write invoice PDFs, credit-note PDFs, and report files through the
    new download operation.
+ - Kolleno: add Email Sent, Report Schedule, Report Type, Template, and
+   Workflow resources, including report generation and status retrieval.
 
 Release 1.8.1 (September 30, 2026)
 -----------------------------------
