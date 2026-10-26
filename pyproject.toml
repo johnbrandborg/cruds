@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "A lightweight Python client for REST APIs — create, read, update, and delete with zero boilerplate"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [{name = "John Brandborg", email = "john.brandborg+pypi@pm.me"}]
 keywords = ["rest", "api", "crud", "http", "https", "planhat"]
 classifiers = [
@@ -20,10 +20,10 @@ classifiers = [
     "Operating System :: POSIX",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Libraries",
     "Topic :: Utilities",
 ]
@@ -70,7 +70,7 @@ where = ["src"]
 [tool.ruff]
 line-length = 88
 indent-width = 4
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F"]
@@ -88,7 +88,7 @@ docstring-code-format = false
 docstring-code-line-length = "dynamic"
 
 [tool.ty.environment]
-python-version = "3.10"
+python-version = "3.11"
 
 [tool.ty.src]
 include = ["src/", "tests/"]

@@ -5,6 +5,9 @@ on:
     branches: [ main ]
     paths:
       - '**.py'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/development.yml'
       - '!docs/**'
   pull_request:
     branches: [ main ]
@@ -14,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -38,11 +41,11 @@ jobs:
         run: make typecheck
 
       - name: Code Testing
-        if: matrix.python-version == '3.10'
+        if: matrix.python-version == '3.11'
         run: make test-report
 
       - name: SonarQube Scan
-        if: matrix.python-version == '3.10'
+        if: matrix.python-version == '3.11'
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -56,3 +59,17 @@ jobs:
             -Dsonar.sources=src/
             -Dsonar.test.exclusions=tests/**
             -Dsonar.tests=tests/
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.13.3"
+
+      - name: Audit dependencies
+        run: >
+          uv audit --locked --preview-features audit-command
