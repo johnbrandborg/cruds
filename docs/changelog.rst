@@ -7,6 +7,10 @@ Unreleased
 Breaking changes:
  - Raise the minimum supported Python version from 3.10 to 3.11.
 
+Security fixes:
+ - Require urllib3 2.8.0 or newer to address known vulnerabilities.
+ - Require certifi 2026.10.19 or newer to address a known vulnerability.
+
 Release 1.9.0 (October 23, 2026)
 --------------------------------
 

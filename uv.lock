@@ -393,7 +393,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "certifi", specifier = ">=2024.2.2" },
+    { name = "certifi", specifier = ">=2026.10.19" },
     { name = "furo", marker = "extra == 'rtd'" },
     { name = "jsonschema", specifier = ">=4.21.1,<5.0.0" },
     { name = "pyyaml", specifier = ">=6.0.1,<7.0.0" },
@@ -401,7 +401,7 @@ requires-dist = [
     { name = "sphinx-copybutton", marker = "extra == 'rtd'" },
     { name = "sphinx-design", marker = "extra == 'rtd'" },
     { name = "sphinxext-opengraph", marker = "extra == 'rtd'" },
-    { name = "urllib3", specifier = ">=2.5.0,<3.0.0" },
+    { name = "urllib3", specifier = ">=2.8.0,<3.0.0" },
 ]
 provides-extras = ["rtd"]
 
