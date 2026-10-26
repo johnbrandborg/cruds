@@ -1,8 +1,8 @@
 Changelog
 =========
 
-Unreleased
-----------
+Release 1.9.1 (October 26, 2026)
+--------------------------------
 
 Breaking changes:
  - Raise the minimum supported Python version from 3.10 to 3.11.
