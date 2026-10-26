@@ -60,7 +60,7 @@ def __init__(
     self.client = PlanhatClient(host=PLANHAT_API_HOST, auth=api_token, **kwargs)
     self.tenant_token = tenant_token
     self.calls_per_min = calls_per_min
-    self._bulk_upsert_response: dict[str, Any] = {}
+    self._bulk_upsert_response = {}
 
 
 @property

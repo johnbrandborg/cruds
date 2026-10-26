@@ -1,6 +1,18 @@
 Changelog
 =========
 
+Release 1.9.1 (October 26, 2026)
+--------------------------------
+
+Breaking changes:
+ - Raise the minimum supported Python version from 3.10 to 3.11.
+
+Security fixes:
+ - Require urllib3 2.8.0 or newer to address ``PYSEC-2026-141``,
+   ``PYSEC-2026-142``, ``PYSEC-2026-4175``, ``PYSEC-2026-4176``, and
+   ``PYSEC-2026-4177``.
+ - Require certifi 2026.10.19 or newer to address ``PYSEC-2026-4320``.
+
 Release 1.9.0 (October 23, 2026)
 --------------------------------
 

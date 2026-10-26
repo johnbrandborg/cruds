@@ -5,23 +5,29 @@ on:
     branches: [ main ]
     paths:
       - '**.py'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/development.yml'
       - '!docs/**'
   pull_request:
     branches: [ main ]
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0  # Disabling shallow clone for SonarCloud
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -38,12 +44,12 @@ jobs:
         run: make typecheck
 
       - name: Code Testing
-        if: matrix.python-version == '3.10'
+        if: matrix.python-version == '3.11'
         run: make test-report
 
       - name: SonarQube Scan
-        if: matrix.python-version == '3.10'
-        uses: SonarSource/sonarqube-scan-action@v6
+        if: matrix.python-version == '3.11'
+        uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -56,3 +62,17 @@ jobs:
             -Dsonar.sources=src/
             -Dsonar.test.exclusions=tests/**
             -Dsonar.tests=tests/
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: "0.13.3"
+
+      - name: Audit dependencies
+        run: >
+          uv audit --locked --preview-features audit-command
